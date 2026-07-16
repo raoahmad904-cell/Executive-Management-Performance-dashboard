@@ -1,4 +1,5 @@
 import Directive from '../models/Directive.js';
+import { updateOverdueStatuses } from './dashboardController.js';
 
 // Create a new directive (can be assigned to multiple users)
 export const createDirective = async (req, res) => {
@@ -59,6 +60,7 @@ export const createDirective = async (req, res) => {
 // Get pending directives (In Process / Overdue)
 export const getPendingDirectives = async (req, res) => {
   try {
+    await updateOverdueStatuses();
     const filter = { status: { $in: ['In Process', 'Overdue'] } };
     if (req.user.role === 'User') {
       filter.user = req.user._id;

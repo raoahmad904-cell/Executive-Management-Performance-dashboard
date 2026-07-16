@@ -1,4 +1,6 @@
 import Task from '../models/Task.js';
+import User from '../models/User.js';
+import { updateOverdueStatuses } from './dashboardController.js';
 
 // 1. Create a new task
 export const createTask = async (req, res) => {
@@ -26,10 +28,20 @@ export const createTask = async (req, res) => {
   }
 };
 
-// 2. Get tasks for the logged-in user
+// 2. Get tasks for the logged-in user (with management checks)
 export const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ user: req.user.id });
+    await updateOverdueStatuses();
+    
+    const roleLower = req.user.role ? req.user.role.toLowerCase() : '';
+    const isManagementOrAdmin = roleLower === 'admin' || roleLower === 'management' || roleLower === 'jmanagement';
+
+    let filter = {};
+    if (!isManagementOrAdmin) {
+      filter.user = req.user.id;
+    }
+
+    const tasks = await Task.find(filter).populate('user', 'name designation role');
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -42,8 +54,16 @@ export const updateTask = async (req, res) => {
     const { id } = req.params;
     const { status, completedAt } = req.body;
 
+    const roleLower = req.user.role ? req.user.role.toLowerCase() : '';
+    const isManagementOrAdmin = roleLower === 'admin' || roleLower === 'management' || roleLower === 'jmanagement';
+
+    let query = { _id: id };
+    if (!isManagementOrAdmin) {
+      query.user = req.user.id;
+    }
+
     const task = await Task.findOneAndUpdate(
-      { _id: id, user: req.user.id },
+      query,
       { status, completedAt },
       { new: true }
     );
@@ -62,7 +82,16 @@ export const updateTask = async (req, res) => {
 export const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const task = await Task.findOneAndDelete({ _id: id, user: req.user.id });
+
+    const roleLower = req.user.role ? req.user.role.toLowerCase() : '';
+    const isManagementOrAdmin = roleLower === 'admin' || roleLower === 'management' || roleLower === 'jmanagement';
+
+    let query = { _id: id };
+    if (!isManagementOrAdmin) {
+      query.user = req.user.id;
+    }
+
+    const task = await Task.findOneAndDelete(query);
 
     if (!task) {
       return res.status(404).json({ error: 'Task not found or unauthorized' });

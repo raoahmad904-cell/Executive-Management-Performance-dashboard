@@ -3,10 +3,60 @@ import User from '../models/User.js';
 import TwoYearPlan from '../models/TwoYearPlan.js';
 import Task from '../models/Task.js';
 import Directive from '../models/Directive.js';
+import mongoose from 'mongoose';
+
+// Helper function to update overdue status dynamically
+export const updateOverdueStatuses = async () => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // start of today
+
+    // Update Tasks
+    const tasks = await Task.find({ status: { $in: ['In Process', 'Overdue'] } });
+    for (const task of tasks) {
+      if (task.endDate) {
+        const end = new Date(task.endDate);
+        end.setHours(0, 0, 0, 0);
+
+        if (isNaN(end.getTime())) continue;
+
+        if (end < today && task.status === 'In Process') {
+          task.status = 'Overdue';
+          await task.save();
+        } else if (end >= today && task.status === 'Overdue') {
+          task.status = 'In Process';
+          await task.save();
+        }
+      }
+    }
+
+    // Update Directives
+    const directives = await Directive.find({ status: { $in: ['In Process', 'Overdue'] } });
+    for (const dir of directives) {
+      if (dir.endDate) {
+        const end = new Date(dir.endDate);
+        end.setHours(0, 0, 0, 0);
+
+        if (isNaN(end.getTime())) continue;
+
+        if (end < today && dir.status === 'In Process') {
+          dir.status = 'Overdue';
+          await dir.save();
+        } else if (end >= today && dir.status === 'Overdue') {
+          dir.status = 'In Process';
+          await dir.save();
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error updating overdue statuses:", error);
+  }
+};
 
 // 1. Get Dashboard Stats (Total, Completed, In Process, Overdue)
 export const getDashboardStats = async (req, res) => {
   try {
+    await updateOverdueStatuses();
     const { facet, designation, officer } = req.query;
     const filter = {};
 
@@ -40,30 +90,116 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
+// Helper to parse dates in DD-MM-YYYY or YYYY-MM-DD format safely
+const parseCustomDate = (dateStr) => {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      return new Date(dateStr); // YYYY-MM-DD
+    }
+    const day = parts[0];
+    const month = parts[1];
+    const year = parts[2].split('T')[0];
+    return new Date(`${month}-${day}-${year}`); // MM-DD-YYYY for JS parser
+  }
+  return new Date(dateStr);
+};
+
 // 2. Get Dashboard Trendline Graph Data
 export const getDashboardTrend = async (req, res) => {
   try {
+    await updateOverdueStatuses();
     const { facet, designation, officer } = req.query;
     const filter = {};
 
     if (officer && officer !== 'All') {
-      filter.user = officer;
+      filter.user = new mongoose.Types.ObjectId(officer);
     } else if (designation && designation !== 'All') {
       const users = await User.find({ designation });
-      const userIds = users.map(u => u._id);
+      const userIds = users.map(u => new mongoose.Types.ObjectId(u._id));
       filter.user = { $in: userIds };
     }
 
     const model = facet === 'Tasks' ? Task : Directive;
-    const totalCount = await model.countDocuments(filter);
 
-    // Scale baseline trend ratios based on total documents in DB
-    const baseScale = totalCount > 0 ? Math.max(1, Math.round(totalCount / 10)) : 1;
+    // Define 12 calendar month buckets for the current year
+    const currentYear = new Date().getFullYear();
+    const MONTHS = [];
+    for (let m = 0; m < 12; m++) {
+      MONTHS.push({
+        start: new Date(Date.UTC(currentYear, m, 1, 0, 0, 0, 0)),
+        end: new Date(Date.UTC(currentYear, m + 1, 0, 23, 59, 59, 999)) // Last day of this month
+      });
+    }
 
-    const assigned = [18, 22, 20, 24, 26, 28, 30, 29, 31, 33, 35, 23].map(v => v * baseScale);
-    const completed = [1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 0].map(v => v * baseScale);
-    const overdue = [55, 58, 62, 68, 72, 78, 82, 88, 92, 98, 103, 103].map(v => v * baseScale);
-    const inProcess = [5, 6, 5, 7, 6, 8, 7, 9, 8, 7, 7, 7].map(v => v * baseScale);
+    // Fetch all records
+    const records = await model.find(filter);
+
+    const assigned = Array(12).fill(0);
+    const completed = Array(12).fill(0);
+    const overdue = Array(12).fill(0);
+    const inProcess = Array(12).fill(0);
+
+    const currentMonthIdx = new Date().getMonth();
+
+    // Evaluate stats for each calendar month
+    for (let m = 0; m < 12; m++) {
+      const monthPeriod = MONTHS[m];
+
+      records.forEach(record => {
+        // 1. Get dates
+        let S = null; // Start
+        let C = null; // Completion
+        let D = null; // Expected End
+
+        if (facet === 'Tasks') {
+          S = parseCustomDate(record.startDate);
+          C = record.completedAt ? parseCustomDate(record.completedAt) : null;
+          D = record.endDate ? parseCustomDate(record.endDate) : null;
+        } else {
+          S = new Date(record.createdAt);
+          C = record.closedAt ? new Date(record.closedAt) : null;
+          D = record.endDate ? parseCustomDate(record.endDate) : null;
+        }
+
+        if (!S || isNaN(S.getTime())) return;
+
+        // Reset times for date-only comparisons
+        S.setHours(0, 0, 0, 0);
+        if (C) C.setHours(0, 0, 0, 0);
+        if (D) D.setHours(0, 0, 0, 0);
+
+        // A. Assigned (New assigned/created in this month)
+        if (S >= monthPeriod.start && S <= monthPeriod.end) {
+          assigned[m] += 1;
+        }
+
+        // B. Completed in this month
+        if (C && C >= monthPeriod.start && C <= monthPeriod.end) {
+          completed[m] += 1;
+        }
+
+        // C. Overdue in this month:
+        // Expected end date D is on or before this month's end, and was not completed before this month's end
+        // Only show overdue up to the current calendar month
+        if (m <= currentMonthIdx && D && D <= monthPeriod.end) {
+          if (!C || C > monthPeriod.end) {
+            overdue[m] += 1;
+          }
+        }
+
+        // D. In Process in this month:
+        // Started on or before monthPeriod.end, and not completed before monthPeriod.start, and not overdue before monthPeriod.start
+        if (S <= monthPeriod.end) {
+          const notCompletedYet = !C || C >= monthPeriod.start;
+          const notOverdueYet = !D || D >= monthPeriod.start;
+          if (notCompletedYet && notOverdueYet) {
+            inProcess[m] += 1;
+          }
+        }
+      });
+    }
 
     res.json({
       assigned,
@@ -79,6 +215,7 @@ export const getDashboardTrend = async (req, res) => {
 // 3. Get Paginated Directives
 export const getDashboardDirectives = async (req, res) => {
   try {
+    await updateOverdueStatuses();
     const { month, year, status, page = 1, limit = 5 } = req.query;
     const filter = {};
 
