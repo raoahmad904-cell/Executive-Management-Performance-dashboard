@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "performanceDashboard",
+    "slug": "performanceDashboard",
+    "version": "1.0.0",
+    "orientation": "default",
+    "scheme": "performancedashboard",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.performancedashboard",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9c4375f6-14e8-485a-a8aa-f96f2bcc756f"
+      }
+    },
+    "owner": "raoahmadrashid"
+  }
+}
