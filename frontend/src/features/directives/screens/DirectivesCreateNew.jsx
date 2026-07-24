@@ -28,9 +28,9 @@ const DIRECTIVE_TYPE_OPTIONS = [
 
 function FieldLabel({ children, required }) {
   return (
-    <Text className="mb-1 text-sm font-semibold text-white/95 h-10" numberOfLines={2}>
+    <Text className="mb-1.5 text-sm font-semibold text-white/95">
       {children}
-      {required ? <Text className="text-amber-200"> *</Text> : null}
+      {required ? <Text className="text-amber-300"> *</Text> : null}
     </Text>
   );
 }
@@ -54,8 +54,8 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
   const [details, setDetails] = useState("");
   const [attachments, setAttachments] = useState([]);
 
-  const labelCls = "mb-1 text-sm font-semibold text-white/95 h-10";
-  const triggerCls = "rounded-xl border-0 bg-white px-3 h-12 flex-row items-center justify-between";
+  const labelCls = "mb-1.5 text-sm font-semibold text-white/95";
+  const triggerCls = "rounded-xl border-0 bg-white px-3.5 h-12 flex-row items-center justify-between";
 
   // Fetch actual users list
   useEffect(() => {
@@ -75,20 +75,6 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
     };
     fetchUsers();
   }, []);
-
-  function toggleUser(id) {
-    setSelectedUserIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  }
-
-  function usersSummary() {
-    if (selectedUserIds.length === 0) return "Select user(s)";
-    return selectedUserIds
-      .map((id) => userOptions.find((o) => o.value === id)?.label)
-      .filter(Boolean)
-      .join(", ");
-  }
 
   async function handlePickFiles() {
     try {
@@ -117,6 +103,10 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
     }
     if (!subject.trim()) {
       Alert.alert("Validation", "Subject is required.");
+      return;
+    }
+    if (!details.trim()) {
+      Alert.alert("Validation", "Directive Details is required.");
       return;
     }
 
@@ -167,13 +157,13 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
 
   return (
     <View className="mx-2 mb-2 mt-1 flex-1 rounded-2xl bg-[#0D4429] p-4">
-
       <ScrollView
         className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingTop: 4, paddingBottom: 28 }}
       >
+        {/* User(s) */}
         <View className="mb-4">
           <CustomDropdownLabel label="User(s)" required>
             <CustomDropdown
@@ -190,109 +180,152 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
           </Text>
         </View>
 
-        <FieldLabel>Subject</FieldLabel>
-        <TextInput
-          placeholder="Enter Subject"
-          placeholderTextColor="#9ca3af"
-          value={subject}
-          onChangeText={setSubject}
-          className="mb-4 rounded-xl bg-white px-3 py-3.5 text-base text-gray-900"
-        />
-
-        <CustomDropdownLabel label="Priority" required>
-          <CustomDropdown
-            value={priority}
-            onSelect={setPriority}
-            options={PRIORITY_OPTIONS}
-            placeholder="Select Priority"
+        {/* Subject */}
+        <View className="mb-4">
+          <FieldLabel>Subject</FieldLabel>
+          <TextInput
+            placeholder="Enter Subject"
+            placeholderTextColor="#9ca3af"
+            value={subject}
+            onChangeText={setSubject}
+            className="h-12 rounded-xl bg-white px-3.5 text-base text-gray-900"
           />
-        </CustomDropdownLabel>
+        </View>
 
-        <CustomDropdownLabel label="Directive Type" required>
-          <CustomDropdown
-            value={directiveType}
-            onSelect={setDirectiveType}
-            options={DIRECTIVE_TYPE_OPTIONS}
-            placeholder="Select Directive Type"
-          />
-        </CustomDropdownLabel>
+        {/* Priority */}
+        <View className="mb-4">
+          <CustomDropdownLabel label="Priority" required>
+            <CustomDropdown
+              value={priority}
+              onSelect={setPriority}
+              options={PRIORITY_OPTIONS}
+              placeholder="Select Priority"
+            />
+          </CustomDropdownLabel>
+        </View>
 
-        <View className="mb-2 flex-row flex-nowrap gap-2">
-          <View className="min-w-0 flex-1">
-            <FieldLabel>Minister Directive Reference</FieldLabel>
+        {/* Directive Type */}
+        <View className="mb-4">
+          <CustomDropdownLabel label="Directive Type" required>
+            <CustomDropdown
+              value={directiveType}
+              onSelect={setDirectiveType}
+              options={DIRECTIVE_TYPE_OPTIONS}
+              placeholder="Select Directive Type"
+            />
+          </CustomDropdownLabel>
+        </View>
+
+        {/* Minister Ref & Directive Date */}
+        <View className="mb-4 flex-row gap-3">
+          <View className="flex-1">
+            <View style={{ height: 38, justifyContent: "flex-end", paddingBottom: 4 }}>
+              <Text className="text-sm font-semibold text-white/95" numberOfLines={2}>
+                Minister Directive Reference
+              </Text>
+            </View>
             <TextInput
+              placeholder="Enter reference"
+              placeholderTextColor="#9ca3af"
               value={ministerRef}
               onChangeText={setMinisterRef}
-              className="rounded-xl bg-white px-3 h-12 text-base text-gray-900"
-            />
-          </View>
-          <View className="min-w-0 flex-1">
-            <DateFilterField label="Directive Date" value={directiveDate} onSelect={setDirectiveDate} labelClassName={labelCls} triggerClassName={triggerCls} />
-
-          </View>
-        </View>
-
-        <View className="mb-2 flex-row flex-nowrap gap-2">
-          <View className="min-w-0 flex-[0.8]">
-            <FieldLabel>Duration (Days)</FieldLabel>
-            <TextInput
-              value={durationDays}
-              onChangeText={setDurationDays}
-              keyboardType="number-pad"
-              className="rounded-xl bg-white px-3 h-12 text-base text-gray-900"
+              className="h-12 rounded-xl bg-white px-3.5 text-base text-gray-900"
             />
           </View>
 
-          <View className="min-w-0 flex-1">
-            <DateFilterField label="Start Date" value={startDate} onSelect={setStartDate} labelClassName={labelCls} triggerClassName={triggerCls} />
-          </View>
-
-          <View className="min-w-0 flex-1">
-            <DateFilterField label="End Date" value={endDate} onSelect={setEndDate} labelClassName={labelCls} triggerClassName={triggerCls} />
+          <View className="flex-1">
+            <View style={{ height: 38, justifyContent: "flex-end", paddingBottom: 4 }}>
+              <Text className="text-sm font-semibold text-white/95" numberOfLines={1}>
+                Directive Date
+              </Text>
+            </View>
+            <DateFilterField
+              label=""
+              value={directiveDate}
+              onSelect={setDirectiveDate}
+              labelClassName="hidden"
+              triggerClassName={triggerCls}
+            />
           </View>
         </View>
 
-        <FieldLabel>Directive Details</FieldLabel>
-        <TextInput
-          placeholder="Enter directive..."
-          placeholderTextColor="#9ca3af"
-          value={details}
-          onChangeText={setDetails}
-          multiline
-          className="mb-4 min-h-[140px] rounded-xl bg-white px-3 py-3.5 text-base text-gray-900"
-          textAlignVertical="top"
-        />
+        {/* Duration (Days) */}
+        <View className="mb-4">
+          <FieldLabel>Duration (Days)</FieldLabel>
+          <TextInput
+            placeholder="Enter duration in days"
+            placeholderTextColor="#9ca3af"
+            value={durationDays}
+            onChangeText={setDurationDays}
+            keyboardType="number-pad"
+            className="h-12 rounded-xl bg-white px-3.5 text-base text-gray-900"
+          />
+        </View>
 
+        {/* Start Date & End Date */}
+        <View className="mb-4 flex-row gap-3">
+          <View className="flex-1">
+            <FieldLabel>Start Date</FieldLabel>
+            <DateFilterField
+              label=""
+              value={startDate}
+              onSelect={setStartDate}
+              labelClassName="hidden"
+              triggerClassName={triggerCls}
+            />
+          </View>
 
-        <FieldLabel>Attachments</FieldLabel>
+          <View className="flex-1">
+            <FieldLabel>End Date</FieldLabel>
+            <DateFilterField
+              label=""
+              value={endDate}
+              onSelect={setEndDate}
+              labelClassName="hidden"
+              triggerClassName={triggerCls}
+            />
+          </View>
+        </View>
 
-        <TouchableOpacity
-          onPress={handlePickFiles}
-          className="mb-2 w-full flex-row items-center justify-between rounded-xl bg-white px-5 py-4"
-        >
-          <Text className="font-semibold text-[#0B5D4E]">
-            Choose files
-          </Text>
+        {/* Directive Details */}
+        <View className="mb-4">
+          <FieldLabel required>Directive Details</FieldLabel>
+          <TextInput
+            placeholder="Enter directive..."
+            placeholderTextColor="#9ca3af"
+            value={details}
+            onChangeText={setDetails}
+            multiline
+            className="min-h-[120px] rounded-xl bg-white p-3.5 text-base text-gray-900"
+            textAlignVertical="top"
+          />
+        </View>
 
-          {/* Optional icon */}
-          <Text className="text-gray-400">📎</Text>
-        </TouchableOpacity>
+        {/* Attachments */}
+        <View className="mb-4">
+          <FieldLabel>Attachments</FieldLabel>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handlePickFiles}
+            className="h-12 w-full flex-row items-center justify-between rounded-xl bg-white px-4"
+          >
+            <Text className="font-semibold text-[#0B5D4E]">
+              {attachments.length > 0 ? `${attachments.length} file(s) selected` : "Choose files"}
+            </Text>
+            <Text className="text-base text-gray-400">📎</Text>
+          </TouchableOpacity>
+        </View>
 
-        {attachments.length > 0 ? (
-          <Text className="mb-4 text-xs text-white/80">
-            {attachments.length} file(s) selected
-          </Text>
-        ) : (
-          <View className="mb-4" />
-        )}
-
-        <TouchableOpacity
-          className="flex-1 bg-amber-400 rounded-xl py-3 items-center"
-          onPress={handleSubmit}
-          activeOpacity={0.85}
-        >
-          <Text className="text-[#0D4429] font-bold text-sm">Submit</Text>
-        </TouchableOpacity>
+        {/* Submit Button */}
+        <View className="mt-2 mb-4">
+          <TouchableOpacity
+            className="h-12 w-full items-center justify-center rounded-xl bg-amber-400"
+            onPress={handleSubmit}
+            activeOpacity={0.85}
+          >
+            <Text className="text-base font-bold text-[#0D4429]">Submit</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );

@@ -47,6 +47,7 @@ export default function MinutesOfMeeting() {
   const [showForm,   setShowForm]   = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [viewTargetItem, setViewTargetItem] = useState(null);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -152,10 +153,8 @@ export default function MinutesOfMeeting() {
 
   function handleSearchChange(text) {
     setSearchText(text);
-    if (text === "") {
-      setQuery("");
-      setPage(0);
-    }
+    setQuery(text.trim());
+    setPage(0);
   }
 
   function clearSearch() {
@@ -207,7 +206,7 @@ export default function MinutesOfMeeting() {
       if (res.ok) {
         setRecords(prev => prev.filter(r => r.id !== id));
         setPage(0);
-        Alert.alert("Deleted", "Minutes of Meeting deleted successfully.");
+        setShowDeleteSuccessModal(true);
       } else {
         const errData = await res.json();
         Alert.alert("Error", errData.message || "Failed to delete record.");
@@ -237,10 +236,9 @@ export default function MinutesOfMeeting() {
       className="mx-2 mb-2 mt-1 flex-1 rounded-2xl bg-[#0D4429]"
       style={{ padding: 16, paddingBottom: 16 }}
     >
-      {/* ── Search + Attach (inline) ─────────────────────────────────── */}
-      <View className="mb-4 flex-row items-center" style={{ gap: 8 }}>
-        {/* Search bar */}
-        <View className="flex-1 flex-row items-center rounded-xl bg-white px-3 pt-3 pb-2">
+      {/* ── Search Bar ───────────────────────────────────────────── */}
+      <View className="mb-4 flex-row items-center">
+        <View className="flex-1 flex-row items-center rounded-xl bg-white px-3 py-2.5">
           <Ionicons name="search-outline" size={18} color="#9ca3af" />
           <TextInput
             className="ml-2 flex-1 text-sm text-gray-700"
@@ -249,7 +247,6 @@ export default function MinutesOfMeeting() {
             value={searchText}
             onChangeText={handleSearchChange}
             returnKeyType="search"
-            onSubmitEditing={applySearch}
           />
           {searchText.length > 0 && (
             <TouchableOpacity
@@ -259,15 +256,7 @@ export default function MinutesOfMeeting() {
               <Ionicons name="close-circle" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            onPress={applySearch}
-            activeOpacity={0.8}
-            className="ml-2 rounded-xl bg-[#0D4429] px-4 py-2"
-          >
-            <Text className="text-sm font-bold text-white">Search</Text>
-          </TouchableOpacity>
         </View>
-
       </View>
 
       {/* ── Cards ───────────────────────────────────────────────────────── */}
@@ -327,10 +316,7 @@ export default function MinutesOfMeeting() {
                       <View className="mb-1 flex-row items-center" style={{ gap: 6 }}>
                         <Ionicons name="document-outline" size={14} color="#6b7280" />
                         <Text className="text-sm text-gray-500">
-                          File No:{" "}
-                          <Text className="font-semibold text-gray-700">
-                            {item.fileNo}
-                          </Text>
+                          File No: {item.fileNo}
                         </Text>
                       </View>
 
@@ -558,49 +544,49 @@ export default function MinutesOfMeeting() {
               {viewTargetItem && (
                 <View style={{ gap: 14, marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="create-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="create-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Subject</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Subject</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.subject}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="calendar-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="calendar-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.date}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="folder-open-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="folder-open-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>File No</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>File No</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.fileNo}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="business-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="business-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Concerned Section</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Concerned Section</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.section}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="person-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="person-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Submitted By</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Submitted By</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.submittedBy || 'N/A'}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="attach-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="attach-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Attachment</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Attachment</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.attachment ? 'Yes' : 'No'}</Text>
                     </View>
                   </View>
@@ -615,6 +601,60 @@ export default function MinutesOfMeeting() {
                 <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>
                   OK
                 </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Custom Delete Success Modal ────────────────────────────── */}
+      <Modal
+        visible={showDeleteSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteSuccessModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={42} color="#0D4429" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Deleted
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                Minutes of Meeting deleted successfully.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowDeleteSuccessModal(false)}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  backgroundColor: '#0D4429',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>

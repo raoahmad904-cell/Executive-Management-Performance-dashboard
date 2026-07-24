@@ -14,27 +14,6 @@ import CustomDropdownLabel from "../../../components/forms/CustomDropdownLabel";
 import DateFilterField from "../../../utils/DateFilterField";
 import { fmtDate } from "../../../utils/utils";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const labelCls = "mb-1 text-sm font-semibold text-white/95";
-const triggerCls = "rounded-xl border-0 bg-white px-3 py-3.5";
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const DAY_NAMES_SHORT = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-
 // ─── Option Lists ─────────────────────────────────────────────────────────────
 const CATEGORY_OPTIONS = [
   { label: "Minister Directive", value: "Minister directive" },
@@ -55,6 +34,15 @@ const ASSIGNED_BY_OPTIONS = [
   { label: "Secretary", value: "Secretary" },
 ];
 
+function FieldLabel({ children, required }) {
+  return (
+    <Text className="mb-1.5 text-sm font-semibold text-white/95">
+      {children}
+      {required ? <Text className="text-amber-300"> *</Text> : null}
+    </Text>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AddTaskScreen({
   selectedKey,
@@ -74,6 +62,9 @@ export default function AddTaskScreen({
   const [description, setDescription] = useState("");
   const [remarks, setRemarks] = useState("");
 
+  const labelCls = "mb-1.5 text-sm font-semibold text-white/95";
+  const triggerCls = "rounded-xl border-0 bg-white px-3.5 h-12 flex-row items-center justify-between";
+
   function reset() {
     setTaskTitle("");
     setCategory("");
@@ -89,7 +80,7 @@ export default function AddTaskScreen({
     if (!taskTitle.trim() || !category || !priority || !assignedBy) {
       Alert.alert(
         "Required Fields",
-        "Please fill in all required fields marked with *",
+        "Please fill in all required fields marked with *"
       );
       return;
     }
@@ -115,7 +106,7 @@ export default function AddTaskScreen({
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={90}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
     >
       <View className="mx-2 mb-2 mt-1 flex-1 rounded-2xl bg-[#0D4429] p-4">
         {/* Header */}
@@ -144,106 +135,123 @@ export default function AddTaskScreen({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          contentContainerStyle={{ paddingBottom: 300 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: 24 }}
         >
-          <CustomDropdownLabel label="Task Title" required>
+          {/* Task Title */}
+          <View className="mb-4">
+            <FieldLabel required>Task Title</FieldLabel>
             <TextInput
-              className="bg-white rounded-xl px-4 py-2.5 text-gray-800 text-base"
+              className="h-12 rounded-xl bg-white px-3.5 text-base text-gray-900"
               placeholder="Enter task title"
               placeholderTextColor="#9ca3af"
               value={taskTitle}
               onChangeText={setTaskTitle}
             />
-          </CustomDropdownLabel>
-
-          <CustomDropdownLabel label="Category" required>
-            <CustomDropdown
-              value={category}
-              onSelect={setCategory}
-              options={CATEGORY_OPTIONS}
-              placeholder="Select Category"
-            />
-          </CustomDropdownLabel>
-
-          <DateFilterField
-            label="Start Date"
-            value={startDateObj}
-            onSelect={setStartDateObj}
-            labelClassName={labelCls}
-            triggerClassName={triggerCls}
-          />
-
-          <View className="mt-2">
-            <DateFilterField
-              label="Expected End Date"
-              value={endDateObj}
-              onSelect={setEndDateObj}
-              labelClassName={labelCls}
-              triggerClassName={triggerCls}
-            />
           </View>
 
-          <CustomDropdownLabel label="Priority" required>
-            <CustomDropdown
-              value={priority}
-              onSelect={setPriority}
-              options={PRIORITY_OPTIONS}
-              placeholder="Select Priority"
-            />
-          </CustomDropdownLabel>
+          {/* Category */}
+          <View className="mb-4">
+            <CustomDropdownLabel label="Category" required>
+              <CustomDropdown
+                value={category}
+                onSelect={setCategory}
+                options={CATEGORY_OPTIONS}
+                placeholder="Select Category"
+              />
+            </CustomDropdownLabel>
+          </View>
 
-          <CustomDropdownLabel label="Assigned By" required>
-            <CustomDropdown
-              value={assignedBy}
-              onSelect={setAssignedBy}
-              options={ASSIGNED_BY_OPTIONS}
-              placeholder="Select Assigned By"
-            />
-          </CustomDropdownLabel>
+          {/* Start Date & Expected End Date in 1 Row */}
+          <View className="mb-4 flex-row gap-3">
+            <View className="flex-1">
+              <FieldLabel>Start Date</FieldLabel>
+              <DateFilterField
+                label=""
+                value={startDateObj}
+                onSelect={setStartDateObj}
+                labelClassName="hidden"
+                triggerClassName={triggerCls}
+              />
+            </View>
 
-          <CustomDropdownLabel label="Description">
+            <View className="flex-1">
+              <FieldLabel>Expected End Date</FieldLabel>
+              <DateFilterField
+                label=""
+                value={endDateObj}
+                onSelect={setEndDateObj}
+                labelClassName="hidden"
+                triggerClassName={triggerCls}
+              />
+            </View>
+          </View>
+
+          {/* Priority */}
+          <View className="mb-4">
+            <CustomDropdownLabel label="Priority" required>
+              <CustomDropdown
+                value={priority}
+                onSelect={setPriority}
+                options={PRIORITY_OPTIONS}
+                placeholder="Select Priority"
+              />
+            </CustomDropdownLabel>
+          </View>
+
+          {/* Assigned By */}
+          <View className="mb-4">
+            <CustomDropdownLabel label="Assigned By" required>
+              <CustomDropdown
+                value={assignedBy}
+                onSelect={setAssignedBy}
+                options={ASSIGNED_BY_OPTIONS}
+                placeholder="Select Assigned By"
+              />
+            </CustomDropdownLabel>
+          </View>
+
+          {/* Description */}
+          <View className="mb-4">
+            <FieldLabel>Description</FieldLabel>
             <TextInput
-              className="h-36 rounded-xl bg-white px-3 py-3.5 text-base text-gray-900"
+              className="min-h-[110px] rounded-xl bg-white p-3.5 text-base text-gray-900"
               placeholder="Task description (optional)"
               placeholderTextColor="#9ca3af"
               value={description}
               onChangeText={setDescription}
               multiline
-              scrollEnabled
               blurOnSubmit={false}
               textAlignVertical="top"
-              style={{ minHeight: 50 }}
             />
-          </CustomDropdownLabel>
+          </View>
 
-          <CustomDropdownLabel label="Remarks">
+          {/* Remarks */}
+          <View className="mb-4">
+            <FieldLabel>Remarks</FieldLabel>
             <TextInput
-              className="h-36 rounded-xl bg-white px-3 py-3.5 text-base text-gray-900"
+              className="min-h-[110px] rounded-xl bg-white p-3.5 text-base text-gray-900"
               placeholder="Add remarks (optional)"
               placeholderTextColor="#9ca3af"
               value={remarks}
               onChangeText={setRemarks}
               multiline
-              scrollEnabled
               blurOnSubmit={false}
               textAlignVertical="top"
-              style={{ minHeight: 50 }}
-              
             />
-          </CustomDropdownLabel>
+          </View>
 
-          <TouchableOpacity
-            className="bg-amber-400 rounded-xl py-3 items-center mt-2"
-            onPress={handleSubmit}
-            activeOpacity={0.85}
-          >
-            <Text
-              className="text-[#1B5E3B] font-bold text-base tracking-wide"
-              numberOfLines={1}
+          {/* Save Task Button */}
+          <View className="mt-2 mb-4">
+            <TouchableOpacity
+              className="h-12 w-full bg-amber-400 rounded-xl items-center justify-center"
+              onPress={handleSubmit}
+              activeOpacity={0.85}
             >
-              Save Task
-            </Text>
-          </TouchableOpacity>
+              <Text className="text-[#0D4429] font-bold text-base">
+                Save Task
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

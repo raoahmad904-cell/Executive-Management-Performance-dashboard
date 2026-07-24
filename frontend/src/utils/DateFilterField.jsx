@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { fmtDate } from "../utils/utils";
 import CalendarPickerModal from "./CalendarPickerModal";
 
 export default function DateFilterField({ label, value, onSelect,
     labelClassName = "mb-1 text-sm font-semibold text-white/95",
     triggerClassName = "rounded-xl border-0 bg-white px-3 py-3.5",
-    containerClassName = "flex-1"
+    containerClassName = "flex-1",
+    iconColor = "#0D4429"
  }) {
     const [open, setOpen] = useState(false);
     return (
@@ -20,7 +22,7 @@ export default function DateFilterField({ label, value, onSelect,
           <Text className={`text-sm flex-1 ${value ? 'text-gray-800' : 'text-gray-400'}`}>
             {fmtDate(value)}
           </Text>
-          <Text className="text-base">📅</Text>
+          <Ionicons name="calendar-outline" size={18} color={iconColor} />
         </TouchableOpacity>
         <CalendarPickerModal
           visible={open}

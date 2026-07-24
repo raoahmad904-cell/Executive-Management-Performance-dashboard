@@ -3,6 +3,7 @@ import { CommonActions, useNavigation } from "@react-navigation/native";
 import React, { useCallback, useLayoutEffect, useMemo, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../../utils/utils.js";
+import { EMBLEM_BASE64 } from "../../../../utils/logoBase64.js";
 import { ActivityIndicator } from "react-native";
 import * as Print from 'expo-print';
 import {
@@ -300,7 +301,7 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
             <table class="header-table">
               <tr>
                 <td class="logo-container">
-                  <img class="logo-img" src="https://upload.wikimedia.org/wikipedia/commons/e/ef/Coat_of_arms_of_Pakistan.svg" />
+                  <img class="logo-img" src="${EMBLEM_BASE64}" />
                 </td>
                 <td class="title-container">
                   <div class="gov-title">Government of Pakistan</div>

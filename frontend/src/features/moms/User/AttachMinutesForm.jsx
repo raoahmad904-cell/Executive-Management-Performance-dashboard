@@ -158,7 +158,7 @@ export default function AttachMinutesForm({ onSubmit, onClose }) {
           className="flex-1"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 250, flexGrow: 1 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: 24 }}
         >
           {/* ── Subject ────────────────────────────────────────────── */}
           <View className="mb-3">

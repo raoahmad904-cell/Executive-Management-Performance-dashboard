@@ -65,7 +65,7 @@ export default function FullscreenLandscapeCard({ title, renderChart }) {
   const openedFullscreen = useRef(false);
   const [chartSlotWidth, setChartSlotWidth] = useState(0);
 
-  const previewH = 220;
+  const previewH = 280;
   const fallbackPreviewW = Math.max(48, width - 80);
   const previewW =
     chartSlotWidth > 0 ? chartSlotWidth : fallbackPreviewW;

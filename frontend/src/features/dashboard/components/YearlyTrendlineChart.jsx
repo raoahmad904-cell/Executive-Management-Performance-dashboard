@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Text, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 
 export const YEARLY_TREND_LABELS = [
@@ -27,6 +27,8 @@ function toData(values, labels) {
 }
 
 export default function YearlyTrendlineChart({ width, height, expanded = false, trendData }) {
+  const [resetKey, setResetKey] = useState(0);
+
   const labels = expanded ? YEARLY_TREND_LABELS_FULL : YEARLY_TREND_LABELS;
 
   const series = trendData || {
@@ -51,19 +53,23 @@ export default function YearlyTrendlineChart({ width, height, expanded = false, 
 
   const xFont = expanded ? 9 : 8;
 
+  const legendHeight = 40;
+  const chartHeight = Math.max(80, height - 75);
+
   const allValues = [...series.assigned, ...series.completed, ...series.overdue, ...series.inProcess];
   const maxVal = Math.max(...allValues, 10);
   const chartMax = Math.ceil(maxVal * 1.15);
 
   return (
-    <View style={{ width, maxWidth: width, overflow: "hidden", backgroundColor: "#fff", borderRadius: 12 }}>
+    <View style={{ width, maxWidth: width, height, backgroundColor: "#fff", borderRadius: 12, paddingBottom: 6 }}>
       <LineChart
+        key={resetKey}
         data={data}
         data2={data2}
         data3={data3}
         data4={data4}
         width={width}
-        height={height}
+        height={chartHeight}
         yAxisLabelWidth={Y_GUTTER}
         spacing={spacing}
         initialSpacing={initialSpacing}
@@ -71,40 +77,57 @@ export default function YearlyTrendlineChart({ width, height, expanded = false, 
         thickness={2}
         curved
         hideDataPoints={false}
-        dataPointsRadius={expanded ? 4 : 3}
+        dataPointsRadius={3.5}
         color={COLORS.assigned}
         color2={COLORS.completed}
         color3={COLORS.overdue}
         color4={COLORS.inProcess}
+        dataPointsColor={COLORS.assigned}
+        dataPointsColor2={COLORS.completed}
+        dataPointsColor3={COLORS.overdue}
+        dataPointsColor4={COLORS.inProcess}
         noOfSections={5}
         maxValue={chartMax}
         yAxisTextStyle={{ color: "#64748b", fontSize: 10 }}
-        xAxisLabelTextStyle={{ color: "#64748b", fontSize: xFont }}
+        xAxisLabelTextStyle={{ color: "#475569", fontSize: xFont, fontWeight: "600" }}
         rulesColor="#e5e7eb"
         yAxisColor="#e5e7eb"
         xAxisColor="#e5e7eb"
         backgroundColor="#ffffff"
         scrollToEnd={expanded}
         pointerConfig={{
-          pointerStripColor: "rgba(0,0,0,0.12)",
-          pointerStripWidth: 2,
+          pointerStripColor: "rgba(0,0,0,0.3)",
+          pointerStripWidth: 1.5,
           pointerColor: "#111827",
-          radius: 4,
+          radius: 5,
           persistPointer: false,
+          pointerVanishDuration: 3000,
           activatePointersOnLongPress: false,
-          pointerLabelWidth: 148,
-          pointerLabelHeight: 128,
+          pointerLabelWidth: 145,
+          pointerLabelHeight: 110,
           autoAdjustPointerLabelPosition: true,
           pointerLabelComponent: (items) => {
             const list = Array.isArray(items) ? items : [];
             return (
-              <View style={{ backgroundColor: "#111827", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 }}>
+              <View
+                style={{
+                  backgroundColor: "#111827",
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  elevation: 6,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 5,
+                }}
+              >
                 {list.length === 0 ? (
                   <Text style={{ color: "#fff", fontSize: 11 }}>No data</Text>
                 ) : (
                   list.map((it, idx) => (
-                    <Text key={idx} style={{ color: it?.color ?? "#fff", fontSize: 11, marginVertical: 2 }}>
-                      {SERIES_LABELS[idx] ?? `Series ${idx + 1}`}: {it?.value ?? "—"}
+                    <Text key={idx} style={{ color: it?.color ?? "#fff", fontSize: 11, fontWeight: "600", marginVertical: 1 }}>
+                      {SERIES_LABELS[idx] ?? `Series ${idx + 1}`}: {it?.value ?? "0"}
                     </Text>
                   ))
                 )}
@@ -114,19 +137,31 @@ export default function YearlyTrendlineChart({ width, height, expanded = false, 
         }}
       />
 
-      <View className="flex-row flex-wrap justify-center gap-x-4 gap-y-1 px-2 pb-2">
-        <Text className="text-[10px] text-gray-600">
-          <Text style={{ color: COLORS.assigned }}>●</Text> Assigned
-        </Text>
-        <Text className="text-[10px] text-gray-600">
-          <Text style={{ color: COLORS.completed }}>●</Text> Completed
-        </Text>
-        <Text className="text-[10px] text-gray-600">
-          <Text style={{ color: COLORS.overdue }}>●</Text> Overdue
-        </Text>
-        <Text className="text-[10px] text-gray-600">
-          <Text style={{ color: COLORS.inProcess }}>●</Text> In process
-        </Text>
+      {/* Legend Container - Image 2 & 3 exact design */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", paddingTop: 4, paddingBottom: 6, flexWrap: "wrap" }}>
+        {/* Assigned */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 8, marginVertical: 2 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.assigned, marginRight: 5 }} />
+          <Text style={{ fontSize: 11, fontWeight: "500", color: "#4B5563" }}>Assigned</Text>
+        </View>
+
+        {/* Completed */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 8, marginVertical: 2 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.completed, marginRight: 5 }} />
+          <Text style={{ fontSize: 11, fontWeight: "500", color: "#4B5563" }}>Completed</Text>
+        </View>
+
+        {/* Overdue */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 8, marginVertical: 2 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.overdue, marginRight: 5 }} />
+          <Text style={{ fontSize: 11, fontWeight: "500", color: "#4B5563" }}>Overdue</Text>
+        </View>
+
+        {/* In process */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginHorizontal: 8, marginVertical: 2 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.inProcess, marginRight: 5 }} />
+          <Text style={{ fontSize: 11, fontWeight: "500", color: "#4B5563" }}>In process</Text>
+        </View>
       </View>
     </View>
   );

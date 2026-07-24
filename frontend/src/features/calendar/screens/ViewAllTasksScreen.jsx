@@ -1,30 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
+  Modal,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import CustomDropdownLabel from "../../../components/forms/CustomDropdownLabel";
 import DateFilterField from "../../../utils/DateFilterField";
 import { formatCompletedAt } from "../../../utils/utils";
+import { EMBLEM_BASE64 } from "../../../utils/logoBase64";
 import * as Print from 'expo-print';
-
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const labelCls = "mb-1 text-sm font-semibold text-white/95";
 const triggerCls = "rounded-xl border-0 bg-white px-3 h-12";
 
-const MONTH_NAMES_FULL = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-const DAY_NAMES_S = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const ITEMS_PER_PAGE = 5;
-
 
 function parseDate(str) {
   if (!str) return null;
@@ -78,7 +74,6 @@ function parseDate(str) {
   return isNaN(date.getTime()) ? null : date;
 }
 
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATEGORY_OPTIONS = [
   { label: '--All Categories--', value: '' },
@@ -95,15 +90,17 @@ const PRIORITY_COLORS = {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDelete, onClose, currentUser, usersList = [] }) {
-  const labelCls = "mb-1 text-sm font-semibold text-white/95";
-  const triggerCls = "rounded-xl border-0 bg-white px-3 py-3.5";
-
   const [searchText, setSearchText] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterUser, setFilterUser] = useState('');
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [page, setPage] = useState(0);
+
+  // Custom Modal States
+  const [selectedViewTask, setSelectedViewTask] = useState(null);
+  const [deleteTargetTask, setDeleteTargetTask] = useState(null);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
 
   const isManagement = useMemo(() => {
     const roleLower = currentUser?.role ? currentUser.role.toLowerCase() : '';
@@ -113,7 +110,6 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
   const userOptions = useMemo(() => {
     const opts = [{ label: '--Select User--', value: '' }];
 
-    // Add current user
     if (currentUser) {
       opts.push({
         label: `${currentUser.name} (Self - ${currentUser.designation})`,
@@ -121,7 +117,6 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
       });
     }
 
-    // Add other users
     usersList.forEach(u => {
       const uId = u._id || u.id;
       const currentUserId = currentUser?._id || currentUser?.id;
@@ -136,7 +131,6 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
   }, [usersList, currentUser]);
 
   function applySearch() {
-    // Keep it here for compatibility, but the list now updates instantly!
     setPage(0);
   }
 
@@ -151,30 +145,25 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
 
   const filtered = useMemo(() => {
     return tasks.filter(task => {
-      // 0. User filter
       if (isManagement) {
         const taskUserId = task.user?._id || task.user?.id || task.user;
         const currentUserId = currentUser?._id || currentUser?.id;
         if (filterUser) {
-          // If a specific user is selected, show only that user's tasks
           if (String(taskUserId) !== String(filterUser)) {
             return false;
           }
         } else {
-          // By default (no selection), only show the logged-in user's own tasks
           if (String(taskUserId) !== String(currentUserId)) {
             return false;
           }
         }
       }
 
-      // 1. Search text filter (title or name, case insensitive)
       const title = task.title || task.name || '';
       if (searchText.trim() && !title.toLowerCase().includes(searchText.trim().toLowerCase())) {
         return false;
       }
 
-      // 2. Category filter (case insensitive, trimmed)
       if (filterCategory) {
         const cat = task.category || '';
         if (cat.trim().toLowerCase() !== filterCategory.trim().toLowerCase()) {
@@ -182,12 +171,10 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
         }
       }
 
-      // 3. Date range filter
       if (fromDate || toDate) {
         const startD = parseDate(task.startDate);
         const endD = parseDate(task.endDate || task.startDate);
 
-        // From Date checks if task starts on or after fromDate (hide if startD < fromDate)
         if (fromDate && startD) {
           startD.setHours(0, 0, 0, 0);
           const f = new Date(fromDate);
@@ -197,7 +184,6 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
           }
         }
 
-        // To Date checks if task ends on or before toDate (hide if endD > toDate)
         if (toDate && endD) {
           endD.setHours(0, 0, 0, 0);
           const t = new Date(toDate);
@@ -207,7 +193,6 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
           }
         }
 
-        // Fallbacks
         if (fromDate && !startD) return false;
         if (toDate && !endD) return false;
       }
@@ -218,15 +203,14 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const pageData = filtered.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
-  function confirmDelete(taskId, dateKey) {
-    Alert.alert(
-      'Delete Task',
-      'Are you sure you want to delete this task? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => onDelete(taskId, dateKey) },
-      ]
-    );
+  async function executeDeleteTask() {
+    if (!deleteTargetTask) return;
+    const { id, dateKey } = deleteTargetTask;
+    setDeleteTargetTask(null);
+    if (onDelete) {
+      await onDelete(id, dateKey);
+    }
+    setShowDeleteSuccessModal(true);
   }
 
   async function handlePrint() {
@@ -255,76 +239,26 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
         <head>
         <meta charset="utf-8">
         <style>
-          body {
-            font-family: Arial, sans-serif;
-            color: #333;
-            padding: 20px;
-          }
-          .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: 2px solid #000;
-            margin-bottom: 25px;
-          }
-          .header-cell {
-            padding: 12px;
-            vertical-align: middle;
-            text-align: center;
-            border: 1.5px solid #000;
-          }
-          .logo-cell {
-            width: 15%;
-          }
-          .logo-img {
-            height: 70px;
-            width: 70px;
-            object-fit: contain;
-          }
-          .title-cell {
-            width: 70%;
-            text-align: center;
-          }
-          .title-govt {
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin: 0;
-            color: #000;
-          }
-          .title-main {
-            font-size: 15px;
-            font-weight: bold;
-            margin: 5px 0 0 0;
-          }
-          .side-cell {
-            width: 15%;
-          }
-          .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-          }
-          .data-table th, .data-table td {
-            border: 1px solid #000;
-            padding: 8px;
-            font-size: 11px;
-            text-align: left;
-          }
-          .data-table th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-          }
-          .data-table tr:nth-child(even) {
-            background-color: #fafafa;
-          }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 20px; color: #111827; }
+          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          .header-cell { vertical-align: middle; }
+          .logo-cell { width: 15%; }
+          .logo-img { width: 80px; height: auto; }
+          .title-cell { width: 70%; text-align: center; }
+          .title-govt { font-size: 14px; font-weight: bold; color: #0D4429; text-transform: uppercase; }
+          .title-main { font-size: 18px; font-weight: bold; color: #0D4429; margin-top: 5px; }
+          .side-cell { width: 15%; }
+          .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          .data-table th, .data-table td { border: 1px solid #000; padding: 8px; font-size: 11px; text-align: left; }
+          .data-table th { background-color: #f2f2f2; font-weight: bold; }
+          .data-table tr:nth-child(even) { background-color: #fafafa; }
         </style>
         </head>
         <body>
-
         <table class="header-table">
           <tr>
             <td class="header-cell logo-cell">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Government_of_Pakistan_logo.svg/120px-Government_of_Pakistan_logo.svg.png" class="logo-img" alt="Emblem" />
+              <img src="${EMBLEM_BASE64}" class="logo-img" alt="Emblem" />
             </td>
             <td class="header-cell title-cell">
               <div class="title-govt">Government of Pakistan</div>
@@ -332,17 +266,14 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
               <div class="title-govt" style="font-size: 11px; font-weight: 500; margin-top: 3px;">Ministry of Planning, Development & Special Initiatives</div>
               <div class="title-main" style="margin-top: 10px; font-size: 15px; font-weight: bold; text-decoration: underline;">Tasks Progress Report</div>
             </td>
-            <td class="header-cell side-cell">
-            </td>
+            <td class="header-cell side-cell"></td>
           </tr>
         </table>
-
         <div style="margin-bottom: 20px; font-size: 13px; line-height: 1.6; color: #374151;">
           <div><span style="font-weight: bold;">Name:</span> ${currentUser?.name || 'Test User'}</div>
           <div><span style="font-weight: bold;">Designation:</span> ${currentUser?.designation || 'Member'}</div>
           <div><span style="font-weight: bold;">Report Date:</span> ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
         </div>
-
         <table class="data-table">
           <thead>
             <tr>
@@ -360,7 +291,6 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
             ${rowsHtml}
           </tbody>
         </table>
-
         </body>
         </html>
       `;
@@ -374,103 +304,104 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
 
   return (
     <View className="mx-2 mb-2 mt-1 flex-1 rounded-2xl bg-[#0D4429]" style={{ padding: 16 }}>
-      {/* ── Filter Header ─────────────────────────────────────────────── */}
-      <View className="pb-3">
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
+        {/* ── Filter Header ─────────────────────────────────────────────── */}
+        <View className="pb-3">
+          {/* Title + Close */}
+          <View className="flex-row items-center justify-end mb-4">
+            <TouchableOpacity
+              onPress={onClose}
+              className="flex-row items-center bg-white rounded-xl px-4 py-2.5"
+              activeOpacity={0.8}
+            >
+              <Text className="text-[#1B5E3B] font-bold text-sm">← Back</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Title + Close */}
-        <View className="flex-row items-center justify-end mb-4">
-          <TouchableOpacity
-            onPress={onClose}
-            className="flex-row items-center bg-white rounded-xl px-4 py-2.5"
-            activeOpacity={0.8}
-          >
-            <Text className="text-[#1B5E3B] font-bold text-sm">← Back</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Search bar */}
+          <View className="flex-row items-center bg-white rounded-xl px-4 h-12 mb-2">
+            <Text className="text-gray-400 mr-2 text-base">🔍</Text>
+            <TextInput
+              className="text-gray-700 text-sm flex-1"
+              style={{ height: '100%', paddingVertical: 0 }}
+              placeholder="Search tasks by title..."
+              placeholderTextColor="#9ca3af"
+              value={searchText}
+              onChangeText={setSearchText}
+              returnKeyType="search"
+              onSubmitEditing={applySearch}
+            />
+          </View>
 
-        {/* Search bar */}
-        <View className="flex-row items-center bg-white rounded-xl px-4 h-12 mb-2">
-          <Text className="text-gray-400 mr-2 text-base">🔍</Text>
-          <TextInput
-            className="text-gray-700 text-sm flex-1"
-            style={{ height: '100%', paddingVertical: 0 }}
-            placeholder="Search tasks by title..."
-            placeholderTextColor="#9ca3af"
-            value={searchText}
-            onChangeText={setSearchText}
-            returnKeyType="search"
-            onSubmitEditing={applySearch}
-          />
-        </View>
+          {/* User filter */}
+          {isManagement && (
+            <View className="mb-2">
+              <CustomDropdownLabel label="User" required>
+                <CustomDropdown
+                  value={filterUser}
+                  onSelect={setFilterUser}
+                  options={userOptions}
+                  placeholder="Select User"
+                />
+              </CustomDropdownLabel>
+            </View>
+          )}
 
-        {/* User filter */}
-        {isManagement && (
+          {/* Category filter */}
           <View className="mb-2">
-            <CustomDropdownLabel label="User" required>
+            <CustomDropdownLabel label="Category" required>
               <CustomDropdown
-                value={filterUser}
-                onSelect={setFilterUser}
-                options={userOptions}
-                placeholder="Select User"
+                value={filterCategory}
+                onSelect={setFilterCategory}
+                options={CATEGORY_OPTIONS}
+                placeholder="Select Category"
               />
             </CustomDropdownLabel>
           </View>
-        )}
 
-        {/* Category filter */}
-        <View className="mb-2">
-          <CustomDropdownLabel label="Category" required>
-            <CustomDropdown
-              value={filterCategory}
-              onSelect={setFilterCategory}
-              options={CATEGORY_OPTIONS}
-              placeholder="Select Category"
-            />
-          </CustomDropdownLabel>
+          {/* Date range */}
+          <View className="flex-row mb-2" style={{ gap: 12 }}>
+            <DateFilterField label="From Date" value={fromDate} onSelect={setFromDate} labelClassName={labelCls} triggerClassName={triggerCls} />
+            <DateFilterField label="To Date" value={toDate} onSelect={setToDate} labelClassName={labelCls} triggerClassName={triggerCls} />
+          </View>
+
+          {/* Action buttons */}
+          <View className="flex-row" style={{ gap: 8 }}>
+            <TouchableOpacity
+              className="flex-1 bg-amber-400 rounded-xl py-2 items-center"
+              onPress={applySearch}
+              activeOpacity={0.85}
+            >
+              <Text className="text-[#0D4429] font-bold text-sm">Search</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 rounded-xl py-2 items-center border border-white/30"
+              onPress={clearFilters}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white font-semibold text-sm">Clear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="w-10 h-9 rounded-xl bg-white/20 items-center justify-center"
+              activeOpacity={0.8}
+              onPress={handlePrint}
+            >
+              <Text className="text-white text-base">🖨️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Date range */}
-        <View className="flex-row mb-2" style={{ gap: 12 }}>
-          {/* <DateFilterField label="From Date" value={fromDate} onSelect={setFromDate} />
-              <DateFilterField label="To Date"   value={toDate}   onSelect={setToDate}   /> */}
-          <DateFilterField label="From Date" value={fromDate} onSelect={setFromDate} labelClassName={labelCls} triggerClassName={triggerCls} />
-          <DateFilterField label="To Date" value={toDate} onSelect={setToDate} labelClassName={labelCls} triggerClassName={triggerCls} />
-
-        </View>
-
-        {/* Action buttons */}
-        <View className="flex-row" style={{ gap: 8 }}>
-          <TouchableOpacity
-            className="flex-1 bg-amber-400 rounded-xl py-2 items-center"
-            onPress={applySearch}
-            activeOpacity={0.85}
-          >
-            <Text className="text-[#0D4429] font-bold text-sm">Search</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 rounded-xl py-2 items-center border border-white/30"
-            onPress={clearFilters}
-            activeOpacity={0.8}
-          >
-            <Text className="text-white font-semibold text-sm">Clear</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="w-10 h-9 rounded-xl bg-white/20 items-center justify-center"
-            activeOpacity={0.8}
-            onPress={handlePrint}
-          >
-            <Text className="text-white text-base">🖨️</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ── Task Card List ─────────────────────────────────────────────── */}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* ── Task Card List ─────────────────────────────────────────────── */}
         {pageData.length === 0 ? (
-          <View className="py-20 items-center justify-center px-8">
+          <View className="py-12 items-center justify-center px-8">
             <Text className="mb-4" style={{ fontSize: 48, lineHeight: 60 }}>🔍</Text>
-            <Text className="text-gray-600 text-base font-semibold">No tasks found</Text>
-            <Text className="text-gray-400 text-sm mt-1 text-center">
+            <Text className="text-gray-200 text-base font-semibold">No tasks found</Text>
+            <Text className="text-white/60 text-sm mt-1 text-center">
               Try adjusting your search filters
             </Text>
           </View>
@@ -535,11 +466,11 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
                         <Text className="text-gray-400 text-xs mb-1">Completed: {formatCompletedAt(task.completedAt)}</Text>
                       )}
 
-                      {/* Action buttons — full text labels */}
+                      {/* Action buttons */}
                       <View className="flex-row mt-3" style={{ gap: 8 }}>
                         <TouchableOpacity
                           className="flex-1 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 items-center"
-                          onPress={() => onViewTask(task)}
+                          onPress={() => setSelectedViewTask(task)}
                           activeOpacity={0.8}
                         >
                           <Text className="text-[#1B5E3B] font-semibold text-sm">View</Text>
@@ -556,7 +487,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
                         {!done && (
                           <TouchableOpacity
                             className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-200 items-center"
-                            onPress={() => confirmDelete(task.id, task.dateKey)}
+                            onPress={() => setDeleteTargetTask(task)}
                             activeOpacity={0.8}
                           >
                             <Text className="text-red-500 font-semibold text-sm">Delete</Text>
@@ -570,39 +501,284 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
             })}
           </View>
         )}
+
+        {/* ── Pagination ─────────────────────────────────────────────────── */}
+        <View className="flex-row items-center justify-between rounded-xl bg-white px-3 mt-2" style={{ paddingTop: 6, paddingBottom: 6 }}>
+          <TouchableOpacity
+            className={`px-5 py-3 rounded-xl ${page === 0 ? 'bg-gray-100' : 'bg-[#1B5E3B]'}`}
+            onPress={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            activeOpacity={0.8}
+          >
+            <Text className={`text-sm font-semibold ${page === 0 ? 'text-gray-400' : 'text-white'}`}>
+              ← Prev
+            </Text>
+          </TouchableOpacity>
+
+          <Text className="text-gray-600 text-sm font-medium">
+            {filtered.length > 0
+              ? `Page ${page + 1} of ${totalPages}  ·  ${filtered.length} task${filtered.length !== 1 ? 's' : ''}`
+              : '—'}
+          </Text>
+
+          <TouchableOpacity
+            className={`px-5 py-3 rounded-xl ${page >= totalPages - 1 ? 'bg-gray-100' : 'bg-[#1B5E3B]'}`}
+            onPress={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            activeOpacity={0.8}
+          >
+            <Text className={`text-sm font-semibold ${page >= totalPages - 1 ? 'text-gray-400' : 'text-white'}`}>
+              Next →
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
-      {/* ── Pagination ─────────────────────────────────────────────────── */}
-      <View className="flex-row items-center justify-between rounded-xl bg-white px-3" style={{ paddingTop: 6, paddingBottom: 6 }}>
-        <TouchableOpacity
-          className={`px-5 py-3 rounded-xl ${page === 0 ? 'bg-gray-100' : 'bg-[#1B5E3B]'}`}
-          onPress={() => setPage(p => Math.max(0, p - 1))}
-          disabled={page === 0}
-          activeOpacity={0.8}
-        >
-          <Text className={`text-sm font-semibold ${page === 0 ? 'text-gray-400' : 'text-white'}`}>
-            ← Prev
-          </Text>
-        </TouchableOpacity>
+      {/* ── 1. Custom View Task Details Modal ───────────────────────────── */}
+      <Modal
+        visible={selectedViewTask !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedViewTask(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 350,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20 }}>
+              <View style={{ alignItems: 'center', marginBottom: 18 }}>
+                <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 16 }}>
+                  <Ionicons name="document-text-outline" size={38} color="#0D4429" />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginTop: 12 }}>
+                  Task Details
+                </Text>
+              </View>
 
-        <Text className="text-gray-600 text-sm font-medium">
-          {filtered.length > 0
-            ? `Page ${page + 1} of ${totalPages}  ·  ${filtered.length} task${filtered.length !== 1 ? 's' : ''}`
-            : '—'}
-        </Text>
+              {selectedViewTask && (
+                <ScrollView style={{ maxHeight: 300, marginBottom: 16 }} showsVerticalScrollIndicator={true}>
+                  <View style={{ gap: 12 }}>
+                    {/* Title */}
+                    <View style={{ borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 8 }}>
+                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Task Title</Text>
+                      <Text style={{ fontSize: 15, color: '#111827', fontWeight: '700', marginTop: 2 }}>{selectedViewTask.title || selectedViewTask.name}</Text>
+                    </View>
 
-        <TouchableOpacity
-          className={`px-5 py-3 rounded-xl ${page >= totalPages - 1 ? 'bg-gray-100' : 'bg-[#1B5E3B]'}`}
-          onPress={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-          disabled={page >= totalPages - 1}
-          activeOpacity={0.8}
-        >
-          <Text className={`text-sm font-semibold ${page >= totalPages - 1 ? 'text-gray-400' : 'text-white'}`}>
-            Next →
-          </Text>
-        </TouchableOpacity>
-      </View>
+                    {/* Category & Priority */}
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Category</Text>
+                        <Text style={{ fontSize: 14, color: '#111827', fontWeight: '700', marginTop: 2 }}>{selectedViewTask.category || 'Routine'}</Text>
+                      </View>
 
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Priority</Text>
+                        <Text style={{ fontSize: 14, color: selectedViewTask.priority === 'High' ? '#DC2626' : selectedViewTask.priority === 'Medium' ? '#D97706' : '#16A34A', fontWeight: '700', marginTop: 2 }}>
+                          {selectedViewTask.priority || 'Medium'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Status */}
+                    <View style={{ borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 8 }}>
+                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Status</Text>
+                      <Text style={{ fontSize: 14, color: selectedViewTask.status === 'Completed' ? '#16A34A' : '#D97706', fontWeight: '700', marginTop: 2 }}>
+                        {selectedViewTask.status || 'In Process'}
+                        {selectedViewTask.completedAt ? ` (${formatCompletedAt(selectedViewTask.completedAt)})` : ''}
+                      </Text>
+                    </View>
+
+                    {/* Dates */}
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Start Date</Text>
+                        <Text style={{ fontSize: 14, color: '#111827', fontWeight: '700', marginTop: 2 }}>{selectedViewTask.startDate || '-'}</Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>End Date</Text>
+                        <Text style={{ fontSize: 14, color: '#111827', fontWeight: '700', marginTop: 2 }}>{selectedViewTask.endDate || '-'}</Text>
+                      </View>
+                    </View>
+
+                    {/* Assigned By */}
+                    <View>
+                      <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Assigned By</Text>
+                      <Text style={{ fontSize: 14, color: '#111827', fontWeight: '700', marginTop: 2 }}>{selectedViewTask.assignedBy || 'Self'}</Text>
+                    </View>
+
+                    {/* Description */}
+                    {selectedViewTask.description ? (
+                      <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 8 }}>
+                        <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Description</Text>
+                        <Text style={{ fontSize: 14, color: '#111827', fontWeight: '700', marginTop: 2, lineHeight: 20 }}>{selectedViewTask.description}</Text>
+                      </View>
+                    ) : null}
+
+                    {/* Remarks */}
+                    {selectedViewTask.remarks ? (
+                      <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 8 }}>
+                        <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '700', textTransform: 'uppercase' }}>Remarks</Text>
+                        <Text style={{ fontSize: 14, color: '#111827', fontWeight: '700', marginTop: 2, lineHeight: 20 }}>{selectedViewTask.remarks}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </ScrollView>
+              )}
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setSelectedViewTask(null)}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#0D4429',
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── 2. Custom Delete Confirmation Modal ─────────────────────────── */}
+      <Modal
+        visible={deleteTargetTask !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteTargetTask(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="trash-outline" size={40} color="#0D4429" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Delete Task
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 22, lineHeight: 20 }}>
+                Are you sure you want to delete <Text style={{ fontWeight: 'bold', color: '#111827' }}>"{deleteTargetTask?.title || deleteTargetTask?.name}"</Text>? This action cannot be undone.
+              </Text>
+
+              {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setDeleteTargetTask(null)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#F3F4F6',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB'
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#4B5563' }}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={executeDeleteTask}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#DC2626',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: 'center'
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── 3. Custom Delete Verification / Success Modal ────────────────── */}
+      <Modal
+        visible={showDeleteSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteSuccessModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#DCFCE7', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={42} color="#16A34A" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Task Deleted
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 22, lineHeight: 20 }}>
+                Task has been deleted successfully!
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowDeleteSuccessModal(false)}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#0D4429',
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

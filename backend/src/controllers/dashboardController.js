@@ -90,20 +90,38 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
-// Helper to parse dates in DD-MM-YYYY or YYYY-MM-DD format safely
-const parseCustomDate = (dateStr) => {
-  if (!dateStr) return null;
-  const parts = String(dateStr).split('-');
-  if (parts.length === 3) {
-    if (parts[0].length === 4) {
-      return new Date(dateStr); // YYYY-MM-DD
-    }
-    const day = parts[0];
-    const month = parts[1];
-    const year = parts[2].split('T')[0];
-    return new Date(`${month}-${day}-${year}`); // MM-DD-YYYY for JS parser
+// Helper to parse dates in DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD, or ISO formats safely
+const parseCustomDate = (dateVal) => {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) return isNaN(dateVal.getTime()) ? null : new Date(dateVal);
+
+  const str = String(dateVal).trim();
+  if (!str) return null;
+
+  if (str.includes('T')) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
   }
-  return new Date(dateStr);
+
+  const delimiter = str.includes('/') ? '/' : (str.includes('-') ? '-' : null);
+  if (delimiter) {
+    const parts = str.split(delimiter);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        if (!isNaN(d.getTime())) return d;
+      } else {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2].split('T')[0], 10);
+        const d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d;
+      }
+    }
+  }
+
+  const fallback = new Date(str);
+  return isNaN(fallback.getTime()) ? null : fallback;
 };
 
 // 2. Get Dashboard Trendline Graph Data
@@ -154,12 +172,16 @@ export const getDashboardTrend = async (req, res) => {
         let D = null; // Expected End
 
         if (facet === 'Tasks') {
-          S = parseCustomDate(record.startDate);
-          C = record.completedAt ? parseCustomDate(record.completedAt) : null;
+          S = parseCustomDate(record.startDate) || parseCustomDate(record.createdAt);
+          C = record.completedAt
+            ? parseCustomDate(record.completedAt)
+            : (record.status === 'Completed' ? (parseCustomDate(record.updatedAt) || parseCustomDate(record.endDate) || parseCustomDate(record.createdAt)) : null);
           D = record.endDate ? parseCustomDate(record.endDate) : null;
         } else {
-          S = new Date(record.createdAt);
-          C = record.closedAt ? new Date(record.closedAt) : null;
+          S = parseCustomDate(record.startDate) || parseCustomDate(record.directiveDate) || parseCustomDate(record.createdAt);
+          C = record.closedAt
+            ? parseCustomDate(record.closedAt)
+            : (record.status === 'Completed' ? (parseCustomDate(record.updatedAt) || parseCustomDate(record.endDate) || parseCustomDate(record.createdAt)) : null);
           D = record.endDate ? parseCustomDate(record.endDate) : null;
         }
 

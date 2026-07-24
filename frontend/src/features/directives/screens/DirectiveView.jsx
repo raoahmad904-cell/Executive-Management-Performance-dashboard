@@ -163,8 +163,8 @@ export default function DirectiveView({ route, navigation }) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 100}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 25}
       >
         {/* Thread */}
         <View className="mx-2 mt-2 flex-1 rounded-2xl bg-[#0D4429] p-3">
@@ -188,69 +188,61 @@ export default function DirectiveView({ route, navigation }) {
           />
         </View>
 
-        {/* Composer */}
+        {/* Compact Composer */}
         <View
-          className="border-t border-gray-200 bg-white px-3 pt-3"
-          style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+          className="border-t border-gray-200 bg-white px-3 py-2.5"
+          style={{ paddingBottom: Math.max(insets.bottom, 10) }}
         >
-          <Text className="mb-1 text-sm font-semibold text-gray-800">
-            Reply
-          </Text>
-
-          <TextInput
-            className="min-h-[96px] rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-[14px] text-gray-800"
-            placeholder="Type your reply..."
-            placeholderTextColor="#9CA3AF"
-            value={reply}
-            onChangeText={setReply}
-            multiline
-            textAlignVertical="top"
-          />
-
-          <Text className="mb-1 mt-3 text-sm font-semibold text-gray-800">
-            Attachments
-          </Text>
-
-          <TouchableOpacity
-            onPress={handlePickFiles}
-            activeOpacity={0.85}
-            className="flex-row items-center rounded-xl border border-gray-200 bg-gray-50 px-3 py-3"
-          >
-            <Ionicons name="attach-outline" size={18} color="#374151" />
-            <Text className="ml-2 text-[13px] text-gray-700">
-              Choose files
-            </Text>
-          </TouchableOpacity>
-
-          {attachments.length > 0 ? (
-            <View className="mt-2">
+          {/* Picked attachments chips */}
+          {attachments.length > 0 && (
+            <View className="mb-2 flex-row flex-wrap gap-1.5">
               {attachments.map((file, index) => (
                 <View
                   key={`${file.uri}-${index}`}
-                  className="mb-1 flex-row items-center justify-between rounded-lg bg-gray-100 px-3 py-2"
+                  className="flex-row items-center rounded-lg bg-gray-100 px-2.5 py-1"
                 >
-                  <Text className="mr-2 flex-1 text-[12px] text-gray-700" numberOfLines={1}>
-                    {file.name}
+                  <Text className="mr-1.5 max-w-[150px] text-[11px] text-gray-700" numberOfLines={1}>
+                    📎 {file.name}
                   </Text>
                   <TouchableOpacity onPress={() => handleRemoveAttachment(index)}>
-                    <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                    <Ionicons name="close-circle" size={16} color="#9CA3AF" />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
-          ) : (
-            <Text className="mt-1 text-[12px] text-gray-500">No file chosen</Text>
           )}
 
-          <View className="mt-3 flex-row justify-end">
-          <TouchableOpacity
-  onPress={handleSend}
-  disabled={!canSend}
-  activeOpacity={0.85}
-  className={`rounded-xl px-6 py-3 bg-amber-400 ${canSend ? "" : "opacity-50"}`}
->
-  <Text className="text-sm font-bold text-black">Send</Text>
-</TouchableOpacity>
+          {/* Text input + Action buttons row */}
+          <View className="flex-row items-end gap-2">
+            <TextInput
+              className="flex-1 min-h-[44px] max-h-[85px] rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[14px] text-gray-800"
+              placeholder="Type your reply..."
+              placeholderTextColor="#9CA3AF"
+              value={reply}
+              onChangeText={setReply}
+              multiline
+              textAlignVertical="top"
+            />
+
+            {/* Attach button */}
+            <TouchableOpacity
+              onPress={handlePickFiles}
+              activeOpacity={0.8}
+              className="h-[44px] w-[44px] items-center justify-center rounded-xl border border-gray-200 bg-gray-50"
+            >
+              <Ionicons name="attach-outline" size={20} color="#374151" />
+            </TouchableOpacity>
+
+            {/* Send button */}
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={!canSend}
+              activeOpacity={0.8}
+              className={`h-[44px] px-4 flex-row items-center justify-center rounded-xl bg-amber-400 ${canSend ? "" : "opacity-50"}`}
+            >
+              <Ionicons name="send" size={16} color="#111827" style={{ marginRight: 4 }} />
+              <Text className="text-xs font-bold text-gray-900">Send</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>

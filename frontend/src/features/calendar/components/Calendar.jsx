@@ -263,7 +263,6 @@ export default function CalendarComponent({ resetViewTrigger }) {
           [dateKey]: (prev[dateKey] || []).filter(t => t.id !== taskId),
         }));
         setShowTaskDetails(false);
-        setShowTaskList(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
         Alert.alert("Error Deleting Task", errJson.error || "Could not delete task.");
@@ -312,6 +311,7 @@ export default function CalendarComponent({ resetViewTrigger }) {
           setShowTaskDetails(true);
         }}
         onComplete={handleComplete}
+        onDelete={handleDelete}
         onClose={() => { setShowTaskList(false); setSelectedKey(null); }}
       />
     );

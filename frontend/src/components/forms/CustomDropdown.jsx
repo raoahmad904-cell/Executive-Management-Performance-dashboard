@@ -10,6 +10,8 @@ export default function CustomDropdown({
   /** Modal header; defaults to `placeholder`. */
   modalTitle,
   disabled = false,
+  triggerClassName,
+  textClassName,
 }) {
   const [open, setOpen] = useState(false);
   const headerTitle = modalTitle ?? placeholder;
@@ -34,7 +36,7 @@ export default function CustomDropdown({
   return (
     <View>
       <TouchableOpacity
-        className={`flex-row items-center justify-between rounded-xl bg-white px-4 h-12 ${disabled ? 'opacity-60' : ''}`}
+        className={`flex-row items-center justify-between rounded-xl bg-white px-2.5 h-12 ${disabled ? 'opacity-60' : ''} ${triggerClassName ?? ''}`}
         onPress={() => {
           if (!disabled) setOpen(true);
         }}
@@ -48,12 +50,12 @@ export default function CustomDropdown({
         }
       >
         <Text
-          className={`flex-1 text-base ${summary ? "text-gray-800" : "text-gray-400"}`}
+          className={`flex-1 text-base font-normal ${summary ? "text-gray-900" : "text-gray-400"} ${textClassName ?? ''}`}
           numberOfLines={multiple ? 4 : 1}
         >
           {summary ?? placeholder}
         </Text>
-        <Text className="ml-2 text-xs text-gray-400">
+        <Text className="ml-1 text-[10px] text-gray-400">
           {multiple ? " ▼" : "▼"}
         </Text>
       </TouchableOpacity>

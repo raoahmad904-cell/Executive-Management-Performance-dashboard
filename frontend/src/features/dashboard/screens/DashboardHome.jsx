@@ -108,9 +108,9 @@ export default function DashboardHome() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        <View className="bg-[#0D4429] px-4 pb-5 pt-4 rounded-xl p-2 mt-2">
-          <View className="flex-row gap-2">
-            <View className="flex-1">
+        <View className="bg-[#0D4429] px-3 pb-4 pt-3 rounded-xl mx-4 mt-2">
+          <View className="flex-row gap-1.5">
+            <View className="flex-[1.15]">
               <CustomDropdownLabel label="Progress Facet">
                 <CustomDropdown
                   options={PROGRESS_FACET_OPTIONS}
@@ -121,7 +121,7 @@ export default function DashboardHome() {
               </CustomDropdownLabel>
             </View>
 
-            <View className="flex-1">
+            <View className="flex-[0.92]">
               <CustomDropdownLabel label="Designation">
                 <CustomDropdown
                   options={DESIGNATION_OPTIONS}
@@ -132,7 +132,7 @@ export default function DashboardHome() {
               </CustomDropdownLabel>
             </View>
 
-            <View className="flex-1">
+            <View className="flex-[0.92]">
               <CustomDropdownLabel label="Officer">
                 <CustomDropdown
                   options={officerOptions}
@@ -146,10 +146,34 @@ export default function DashboardHome() {
         </View>
 
         <View className="mt-4 flex-row px-4">
-          <StatCard label="Total" value={String(stats.total)} color="#1a3a5c" icon="📊" />
-          <StatCard label="Completed" value={String(stats.completed)} color="#43a047" icon="✅" />
-          <StatCard label="In Process" value={String(stats.inProcess)} color="#1e88e5" icon="🔄" />
-          <StatCard label="Overdue" value={String(stats.overdue)} color="#e53935" icon="⚠️" />
+          <StatCard
+            label="Total"
+            value={String(stats.total)}
+            color="#1a3a5c"
+            iconName="bar-chart-outline"
+            bgTint="#E8EEF5"
+          />
+          <StatCard
+            label="Completed"
+            value={String(stats.completed)}
+            color="#15803d"
+            iconName="checkmark-circle-outline"
+            bgTint="#DCFCE7"
+          />
+          <StatCard
+            label="In Process"
+            value={String(stats.inProcess)}
+            color="#1d4ed8"
+            iconName="sync-outline"
+            bgTint="#DBEAFE"
+          />
+          <StatCard
+            label="Overdue"
+            value={String(stats.overdue)}
+            color="#b91c1c"
+            iconName="alert-circle-outline"
+            bgTint="#FEE2E2"
+          />
         </View>
 
         <View className="mt-2 px-4">

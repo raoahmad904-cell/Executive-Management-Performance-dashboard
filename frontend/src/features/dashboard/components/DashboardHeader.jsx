@@ -29,7 +29,7 @@ export default function DashboardHeader({
   return (
     <View style={{ paddingTop: topInset }} className="bg-white">
       {/* Top row: menu + logo + user */}
-      <View className="z-10 flex-row items-center bg-white px-3 py-3">
+      <View className="z-10 flex-row items-center bg-white px-3 py-2.5">
         {onMenuPress ? (
           <TouchableOpacity
             onPress={onMenuPress}
@@ -38,7 +38,7 @@ export default function DashboardHeader({
             accessibilityRole="button"
             accessibilityLabel="Open menu"
           >
-            <Ionicons name="menu" size={28} color="#0B5D4E" />
+            <Ionicons name="menu" size={28} color="#0D4429" />
           </TouchableOpacity>
         ) : null}
 
@@ -59,27 +59,45 @@ export default function DashboardHeader({
           >
             <Ionicons name="person-circle-outline" size={26} color="#0A92E2" />
             <Text
-              className="max-w-[140px] text-[#0A92E2] font-semibold"
+              className="max-w-[140px] text-[#0A92E2] font-semibold text-sm"
               numberOfLines={1}
             >
               {roleLabel}
             </Text>
           </TouchableOpacity>
 
+          {/* Vertical Profile Dropdown Menu */}
           {open && (
-            <View className="absolute right-0 top-11 z-20 w-60 flex-row items-center justify-between rounded-xl border border-gray-200 bg-white px-2 py-1.5 shadow-lg">
+            <View
+              className="absolute right-0 top-11 z-50 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl"
+              style={{
+                width: 175,
+                elevation: 10,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+              }}
+            >
+              {/* Change Password option */}
               <TouchableOpacity
                 onPress={() => {
                   setOpen(false);
                   navigation?.replace("ChangePassword");
                 }}
-                className="flex-1 items-center py-1.5"
+                activeOpacity={0.7}
+                className="flex-row items-center rounded-lg px-3 py-2.5 active:bg-emerald-50"
               >
-                <Text className="text-gray-800 font-bold text-[13px] text-center">Change Password</Text>
+                <Ionicons name="key-outline" size={16} color="#0D4429" style={{ marginRight: 8 }} />
+                <Text className="text-[#0D4429] font-bold text-[13px]" numberOfLines={1}>
+                  Change Password
+                </Text>
               </TouchableOpacity>
 
-              <View style={{ width: 1, height: 16, backgroundColor: '#E5E7EB' }} />
+              {/* Divider */}
+              <View className="my-1 h-[1px] bg-gray-100" />
 
+              {/* Logout option */}
               <TouchableOpacity
                 onPress={() => {
                   setOpen(false);
@@ -90,18 +108,28 @@ export default function DashboardHeader({
                     })
                   );
                 }}
-                className="w-20 items-center py-1.5"
+                activeOpacity={0.7}
+                className="flex-row items-center rounded-lg px-3 py-2.5 active:bg-red-50"
               >
-                <Text className="text-red-500 font-bold text-[13px] text-center">Logout</Text>
+                <Ionicons name="log-out-outline" size={16} color="#DC2626" style={{ marginRight: 8 }} />
+                <Text className="text-red-500 font-bold text-[13px]" numberOfLines={1}>
+                  Logout
+                </Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
       </View>
 
-      {/* Green title bar */}
-      <View className="bg-[#0B5D4E] py-3">
-        <Text className="px-2 text-center text-sm font-bold uppercase tracking-wide text-white">
+      {/* Green title bar (Single line on all devices) */}
+      <View className="bg-[#0D4429] px-3 py-2.5 items-center justify-center">
+        <Text
+          className="text-center font-bold uppercase tracking-wide text-white"
+          style={{ fontSize: 13, lineHeight: 18 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit={true}
+          minimumFontScale={0.75}
+        >
           {headerTitle}
         </Text>
       </View>

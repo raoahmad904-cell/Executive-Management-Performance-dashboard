@@ -110,31 +110,47 @@ export default function DirectivesSection() {
         </View>
       </View>
 
-      {/* Status Tab Pills */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
-        <View className="flex-row gap-2">
-          {STATUS_OPTIONS.map((s) => {
-            const active = status === s.value;
-            const colors = {
-              All: active ? "bg-gray-800" : "bg-white border-gray-200",
-              Completed: active ? "bg-green-600" : "bg-white border-gray-200",
-              Overdue: active ? "bg-red-500" : "bg-white border-gray-200",
-              "In Process": active ? "bg-blue-600" : "bg-white border-gray-200",
-            };
-            return (
-              <TouchableOpacity
-                key={s.value}
-                onPress={() => handleStatusTab(s.value)}
-                className={`px-4 py-1.5 rounded-full border ${colors[s.value]}`}
+      {/* Status Tab Pills — Non-scrollable flex-1 layout */}
+      <View className="flex-row mb-4" style={{ gap: 6 }}>
+        {STATUS_OPTIONS.map((s) => {
+          const active = status === s.value;
+          return (
+            <TouchableOpacity
+              key={s.value}
+              onPress={() => handleStatusTab(s.value)}
+              activeOpacity={0.8}
+              style={{
+                flex: 1,
+                backgroundColor: active ? "#0D4429" : "#FFFFFF",
+                borderColor: active ? "#0D4429" : "#E5E7EB",
+                borderWidth: 1,
+                borderRadius: 999,
+                paddingVertical: 8,
+                paddingHorizontal: 2,
+                alignItems: "center",
+                justifyContent: "center",
+                elevation: active ? 2 : 0,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: active ? 0.08 : 0,
+                shadowRadius: 4,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: "700",
+                  color: active ? "#FFFFFF" : "#4B5563",
+                  textAlign: "center",
+                }}
+                numberOfLines={1}
               >
-                <Text className={`text-xs font-semibold ${active ? "text-white" : "text-gray-500"}`}>
-                  {s.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
+                {s.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       {/* Cards & Load States */}
       {loading ? (

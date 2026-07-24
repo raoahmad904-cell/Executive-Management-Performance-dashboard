@@ -181,13 +181,13 @@ export default function DashboardScreen({ route, navigation }) {
             <View className="flex-1 flex-row">
               <GestureDetector gesture={drawerPan}>
                 <View
-                  className="h-full w-[88%] max-w-[380px] overflow-hidden rounded-tr-3xl bg-white shadow-2xl"
+                  className="h-full w-[82%] max-w-[360px] overflow-hidden rounded-tr-[28px] rounded-br-[28px] bg-white shadow-2xl"
                   style={{
                     shadowColor: "#000",
-                    shadowOffset: { width: 4, height: 0 },
-                    shadowOpacity: 0.12,
-                    shadowRadius: 12,
-                    elevation: 16,
+                    shadowOffset: { width: 6, height: 0 },
+                    shadowOpacity: 0.16,
+                    shadowRadius: 16,
+                    elevation: 20,
                   }}
                 >
                   <SideMenu

@@ -14,12 +14,13 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
+import { EMBLEM_BASE64 } from "../../../utils/logoBase64.js";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import DateFilterField from "../../../utils/DateFilterField";
 import * as Print from 'expo-print';
 
 const SECTION_OPTIONS = [
-  { label: "--All Sections--", value: "" },
+  { label: "All Sections", value: "" },
   { label: "HUMAN RESOURCE MANAGEMENT WING", value: "HUMAN RESOURCE MANAGEMENT WING" },
   { label: "ADMINISTRATION WING", value: "ADMINISTRATION WING" },
   { label: "SPECIAL INITIATIVE WING", value: "SPECIAL INITIATIVE WING" },
@@ -187,7 +188,7 @@ export default function MinutesRepository() {
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
-      const q = activeFilters.text.toLowerCase();
+      const q = quickSearch.trim().toLowerCase();
       if (
         q &&
         !r.subject.toLowerCase().includes(q) &&
@@ -216,7 +217,7 @@ export default function MinutesRepository() {
       }
       return true;
     });
-  }, [records, activeFilters]);
+  }, [records, quickSearch, activeFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const pageData = filtered.slice(
@@ -344,7 +345,7 @@ export default function MinutesRepository() {
         <table class="header-table">
           <tr>
             <td class="header-cell logo-cell">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Government_of_Pakistan_logo.svg/120px-Government_of_Pakistan_logo.svg.png" class="logo-img" alt="Emblem" />
+              <img src="${EMBLEM_BASE64}" class="logo-img" alt="Emblem" />
             </td>
             <td class="header-cell title-cell">
               <div class="title-govt">Government of Pakistan</div>
@@ -421,13 +422,19 @@ export default function MinutesRepository() {
               placeholder="Quick Search…"
               placeholderTextColor="#9ca3af"
               value={quickSearch}
-              onChangeText={setQuickSearch}
+              onChangeText={(text) => {
+                setQuickSearch(text);
+                setPage(0);
+              }}
               returnKeyType="search"
               onSubmitEditing={applySearch}
             />
             {quickSearch.length > 0 && (
               <TouchableOpacity
-                onPress={() => setQuickSearch("")}
+                onPress={() => {
+                  setQuickSearch("");
+                  setPage(0);
+                }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Ionicons name="close-circle" size={16} color="#9ca3af" />
@@ -442,7 +449,7 @@ export default function MinutesRepository() {
           <CustomDropdown
             value={section}
             options={SECTION_OPTIONS}
-            placeholder="--Select--"
+            placeholder="Select"
             onSelect={setSection}
           />
         </View>
@@ -574,10 +581,7 @@ export default function MinutesRepository() {
                         color="#6b7280"
                       />
                       <Text className="text-sm text-gray-500">
-                        Meeting No:{" "}
-                        <Text className="font-semibold text-gray-700">
-                          {item.meetingNo}
-                        </Text>
+                        Meeting No: {item.meetingNo}
                       </Text>
                     </View>
 
@@ -716,49 +720,49 @@ export default function MinutesRepository() {
               {viewTargetItem && (
                 <View style={{ gap: 14, marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="create-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="create-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Subject</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Subject</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.subject}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="calendar-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="calendar-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Date</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.date}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="folder-open-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="folder-open-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Meeting No</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Meeting No</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.meetingNo}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="business-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="business-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Concerned Section</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Concerned Section</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.section}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="person-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="person-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Submitted By</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Submitted By</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.submittedBy || 'N/A'}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                    <Ionicons name="attach-outline" size={18} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
+                    <Ionicons name="attach-outline" size={20} color="#0D4429" style={{ width: 24, marginTop: 2 }} />
                     <View style={{ flex: 1, marginLeft: 6 }}>
-                      <Text style={{ fontSize: 10, color: '#888888', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Attachment</Text>
+                      <Text style={{ fontSize: 13, color: '#6b7280', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>Attachment</Text>
                       <Text style={{ fontSize: 14, color: '#111827', fontWeight: '600', marginTop: 1 }}>{viewTargetItem.attachment ? 'Yes' : 'No'}</Text>
                     </View>
                   </View>

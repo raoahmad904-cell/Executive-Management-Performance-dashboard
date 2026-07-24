@@ -1,79 +1,170 @@
 import React from "react";
 import { Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const STATUS_CONFIG = {
-  Overdue:    { bg: "bg-red-50",    border: "border-red-200",   dot: "#e53935", text: "text-red-600"   },
-  Completed:  { bg: "bg-green-50",  border: "border-green-200", dot: "#43a047", text: "text-green-700" },
-  "In Process":{ bg: "bg-blue-50", border: "border-blue-200",  dot: "#1e88e5", text: "text-blue-700"  },
+  Overdue: {
+    bg: "#FEE2E2",
+    text: "#B91C1C",
+    dot: "#DC2626",
+    label: "Overdue",
+  },
+  Completed: {
+    bg: "#DCFCE7",
+    text: "#15803D",
+    dot: "#16A34A",
+    label: "Completed",
+  },
+  "In Process": {
+    bg: "#EEF4FF",
+    text: "#2563EB",
+    dot: "#2563EB",
+    label: "In Process",
+  },
 };
 
-function formatDate(dateStr) {
+const MONTH_NAMES_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+];
+
+function formatDateFormatted(dateStr) {
   if (!dateStr) return "N/A";
-  // If ISO string: "2026-07-20T19:00:00.000Z"
   let cleanDate = dateStr;
-  if (dateStr.includes('T')) {
-    cleanDate = dateStr.split('T')[0]; // "2026-07-20"
+  if (dateStr.includes("T")) {
+    cleanDate = dateStr.split("T")[0];
   }
-  // If YYYY-MM-DD format: "2026-07-20" -> convert to "20-07-2026"
-  if (cleanDate.includes('-')) {
-    const parts = cleanDate.split('-');
+  if (cleanDate.includes("-")) {
+    const parts = cleanDate.split("-");
+    let day, month, year;
     if (parts[0].length === 4) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      year = parts[0];
+      month = parseInt(parts[1], 10) - 1;
+      day = parts[2];
+    } else {
+      day = parts[0];
+      month = parseInt(parts[1], 10) - 1;
+      year = parts[2];
     }
+    const mName = MONTH_NAMES_SHORT[month] ?? parts[1];
+    const padDay = String(day).padStart(2, "0");
+    return `${padDay} ${mName} ${year}`;
   }
   return cleanDate;
 }
 
 export default function DirectiveCard({ item, index }) {
   const sc = STATUS_CONFIG[item.status] ?? {
-    bg: "bg-gray-50", border: "border-gray-200", dot: "#9ca3af", text: "text-gray-600",
+    bg: "#F3F4F6",
+    text: "#4B5563",
+    dot: "#9CA3AF",
+    label: item.status || "N/A",
   };
 
+  const formattedId = `ID #${String(index).padStart(3, "0")}`;
+
   return (
-    <View className={`rounded-2xl border mb-3 p-4 ${sc.bg} ${sc.border}`}>
-      {/* Top row — Sr No + Subject + Status badge */}
-      <View className="flex-row items-start justify-between mb-2">
-        <View className="flex-row items-center flex-1 mr-2">
-          {/* Index bubble */}
-          <View className="w-6 h-6 rounded-full bg-white border border-gray-200 items-center justify-center mr-2">
-            <Text className="text-xs font-bold text-gray-500">{index}</Text>
-          </View>
-          <Text className="text-sm font-semibold text-gray-800 flex-1" numberOfLines={2}>
+    <View
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        borderLeftWidth: 5,
+        borderLeftColor: "#0F6A52",
+        padding: 16,
+        marginBottom: 12,
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      }}
+    >
+      {/* Header Row: Title & ID on Left, Status Pill on Top Right */}
+      <View className="flex-row items-start justify-between mb-2.5">
+        <View className="flex-1 pr-2">
+          <Text style={{ fontSize: 16, fontWeight: "700", color: "#1F2937", lineHeight: 22 }}>
             {item.subject}
           </Text>
+          <Text style={{ fontSize: 12, fontWeight: "500", color: "#6B7280", marginTop: 2 }}>
+            {formattedId}
+          </Text>
         </View>
 
-        {/* Status badge */}
-        <View className="flex-row items-center bg-white border rounded-full px-2 py-1 gap-1" style={{ borderColor: sc.dot + "55" }}>
-          <View className="w-2 h-2 rounded-full" style={{ backgroundColor: sc.dot }} />
-          <Text className={`text-xs font-semibold ${sc.text}`}>{item.status}</Text>
-        </View>
-      </View>
-
-      {/* Divider */}
-      <View className="h-px bg-black/5 mb-2" />
-
-      {/* Bottom row — dates + user */}
-      <View className="flex-row justify-between items-center">
-        <View className="flex-row gap-3">
-          <View>
-            <Text className="text-xs text-gray-400 mb-0.5">Start</Text>
-            <Text className="text-xs font-medium text-gray-600">{formatDate(item.startDate)}</Text>
-          </View>
-          <View className="w-px bg-gray-200" />
-          <View>
-            <Text className="text-xs text-gray-400 mb-0.5">End</Text>
-            <Text className="text-xs font-medium text-gray-600">{formatDate(item.endDate)}</Text>
-          </View>
-        </View>
-
-        {/* User pill */}
-        <View className="bg-white/80 border border-gray-200 rounded-full px-3 py-1 max-w-[120px]">
-          <Text className="text-xs text-gray-500 font-medium" numberOfLines={1}>
-            👤 {item.users}
+        {/* Status Pill */}
+        <View
+          style={{
+            backgroundColor: sc.bg,
+            borderRadius: 999,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: sc.dot,
+              marginRight: 5,
+            }}
+          />
+          <Text style={{ fontSize: 11, fontWeight: "600", color: sc.text }}>
+            {sc.label}
           </Text>
         </View>
       </View>
+
+      {/* Date Container - Compact */}
+      <View
+        style={{
+          backgroundColor: "#F8FAFC",
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: "#E5E7EB",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 10,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+          <Ionicons name="calendar-outline" size={16} color="#0F6A52" style={{ marginRight: 6 }} />
+          <View>
+            <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "500" }}>Start Date</Text>
+            <Text style={{ fontSize: 12.5, color: "#1F2937", fontWeight: "600", marginTop: 1 }}>
+              {formatDateFormatted(item.startDate)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ width: 1, height: 22, backgroundColor: "#E5E7EB", marginHorizontal: 8 }} />
+
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+          <Ionicons name="flag-outline" size={16} color="#0F6A52" style={{ marginRight: 6 }} />
+          <View>
+            <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "500" }}>End Date</Text>
+            <Text style={{ fontSize: 12.5, color: "#1F2937", fontWeight: "600", marginTop: 1 }}>
+              {formatDateFormatted(item.endDate)}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Assigned User Section - Single-line Layout */}
+      {item.users ? (
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+          <Ionicons name="person-circle-outline" size={16} color="#0F6A52" style={{ marginRight: 5 }} />
+          <Text style={{ fontSize: 12.5, color: "#6B7280", fontWeight: "500" }}>
+            Assigned To: <Text style={{ color: "#1F2937", fontWeight: "600" }}>{item.users}</Text>
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
