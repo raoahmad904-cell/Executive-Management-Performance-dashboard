@@ -1,8 +1,10 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useLayoutEffect, useState, useEffect } from "react";
 import {
   Alert,
+  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -53,6 +55,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
   const [endDate, setEndDate] = useState("");
   const [details, setDetails] = useState("");
   const [attachments, setAttachments] = useState([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const labelCls = "mb-1.5 text-sm font-semibold text-white/95";
   const triggerCls = "rounded-xl border-0 bg-white px-3.5 h-12 flex-row items-center justify-between";
@@ -133,18 +136,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
       });
 
       if (res.ok) {
-        Alert.alert("Directive", "Submitted Successfully.", [
-          {
-            text: "OK",
-            onPress: () => {
-              if (onSubmitted) {
-                onSubmitted();
-                return;
-              }
-              navigation?.replace?.("Dashboard");
-            },
-          },
-        ]);
+        setShowSuccessModal(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
         Alert.alert("Error", errJson.error || "Failed to submit directive.");
@@ -243,7 +235,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
               label=""
               value={directiveDate}
               onSelect={setDirectiveDate}
-              labelClassName="hidden"
+              containerClassName="w-full"
               triggerClassName={triggerCls}
             />
           </View>
@@ -270,7 +262,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
               label=""
               value={startDate}
               onSelect={setStartDate}
-              labelClassName="hidden"
+              containerClassName="w-full"
               triggerClassName={triggerCls}
             />
           </View>
@@ -281,7 +273,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
               label=""
               value={endDate}
               onSelect={setEndDate}
-              labelClassName="hidden"
+              containerClassName="w-full"
               triggerClassName={triggerCls}
             />
           </View>
@@ -327,6 +319,74 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* ── Custom Directive Success Modal ────────────────────────────── */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowSuccessModal(false);
+          if (onSubmitted) {
+            onSubmitted();
+          } else {
+            navigation?.replace?.("Dashboard");
+          }
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={42} color="#0D4429" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Directive
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                Submitted Successfully.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  if (onSubmitted) {
+                    onSubmitted();
+                  } else {
+                    navigation?.replace?.("Dashboard");
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  backgroundColor: '#0D4429',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

@@ -58,6 +58,10 @@ function TwoYearPlanEditorBody() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
+  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
+  const [showSubmitSuccessModal, setShowSubmitSuccessModal] = useState(false);
+
   const richText = useRef(null);
 
   function dataKey(section, quarter) {
@@ -162,8 +166,8 @@ function TwoYearPlanEditorBody() {
         if (data.plan && data.plan._id) {
           setPlanId(data.plan._id);
         }
-        Alert.alert("Saved", "Your progress has been saved.");
         setOpenSection(null);
+        setShowSaveSuccessModal(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
         Alert.alert("Error", errJson.error || "Failed to save plan.");
@@ -179,52 +183,44 @@ function TwoYearPlanEditorBody() {
       Alert.alert("Locked", "This plan has already been submitted.");
       return;
     }
-    Alert.alert(
-      "Submit Plan",
-      "Are you sure you want to submit your Two Year Plan? You won't be able to edit it afterwards.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Submit",
-          onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem("token");
-              const payload = {
-                status: 'Submitted',
-                plan: formatPlanForAPI()
-              };
-              if (planId) {
-                payload._id = planId;
-              }
+    setShowConfirmSubmitModal(true);
+  }
 
-              const res = await fetch(`${API_BASE_URL}api/two-year-plan/submit`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-              });
+  async function executeSubmitPlan() {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const payload = {
+        status: 'Submitted',
+        plan: formatPlanForAPI()
+      };
+      if (planId) {
+        payload._id = planId;
+      }
 
-              if (res.ok) {
-                const data = await res.json();
-                if (data.plan && data.plan._id) {
-                  setPlanId(data.plan._id);
-                }
-                setIsSubmitted(true);
-                Alert.alert("Submitted", "Your Two Year Plan has been submitted successfully.");
-              } else {
-                const errJson = await res.json().catch(() => ({}));
-                Alert.alert("Error", errJson.error || "Failed to submit plan.");
-              }
-            } catch (error) {
-              console.error("Error submitting plan:", error);
-              Alert.alert("Network Error", "Could not connect to the server.");
-            }
-          }
+      const res = await fetch(`${API_BASE_URL}api/two-year-plan/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.plan && data.plan._id) {
+          setPlanId(data.plan._id);
         }
-      ]
-    );
+        setIsSubmitted(true);
+        setShowSubmitSuccessModal(true);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        Alert.alert("Error", errJson.error || "Failed to submit plan.");
+      }
+    } catch (error) {
+      console.error("Error submitting plan:", error);
+      Alert.alert("Network Error", "Could not connect to the server.");
+    }
   }
 
   return (
@@ -549,6 +545,190 @@ function TwoYearPlanEditorBody() {
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
+
+      {/* ── 1. Custom Save Success Modal ────────────────────────────── */}
+      <Modal
+        visible={showSaveSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSaveSuccessModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={42} color="#0D4429" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Saved
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                Your progress has been saved.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowSaveSuccessModal(false)}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  backgroundColor: '#0D4429',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── 2. Custom Submit Confirmation Modal ────────────────────────────── */}
+      <Modal
+        visible={showConfirmSubmitModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConfirmSubmitModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#FEF3C7', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="help-circle" size={42} color="#D97706" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Submit Plan
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                Are you sure you want to submit your Two Year Plan? You won't be able to edit it afterwards.
+              </Text>
+
+              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setShowConfirmSubmitModal(false)}
+                  style={{
+                    flex: 1,
+                    height: 48,
+                    backgroundColor: '#F3F4F6',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#374151', textAlign: 'center' }}>CANCEL</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={async () => {
+                    setShowConfirmSubmitModal(false);
+                    await executeSubmitPlan();
+                  }}
+                  style={{
+                    flex: 1,
+                    height: 48,
+                    backgroundColor: '#0D4429',
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>SUBMIT</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── 3. Custom Submitted Success Modal ────────────────────────────── */}
+      <Modal
+        visible={showSubmitSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSubmitSuccessModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={42} color="#0D4429" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Submitted
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                Your Two Year Plan has been submitted successfully.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowSubmitSuccessModal(false)}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  backgroundColor: '#0D4429',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -569,12 +749,30 @@ export default function TwoYearPlanScreen({ navigation, embedded = false }) {
   const headerTitle = getDashboardHeaderTitle(role);
   const menuItems = useMemo(() => getDashboardMenu(role), []);
 
+  const [currentUserName, setCurrentUserName] = useState(roleLabel);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeItemId, setActiveItemId] = useState("two-year-plan");
   const [expandedParentIds, setExpandedParentIds] = useState({
     directives: true,
   });
   const [menuSafeAreaKey, setMenuSafeAreaKey] = useState(0);
+
+  useEffect(() => {
+    const loadUserName = async () => {
+      try {
+        const uStr = await AsyncStorage.getItem("user");
+        if (uStr) {
+          const u = JSON.parse(uStr);
+          if (u && u.name) {
+            setCurrentUserName(u.name);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user in TwoYearPlanScreen:", err);
+      }
+    };
+    loadUserName();
+  }, []);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
@@ -608,7 +806,7 @@ export default function TwoYearPlanScreen({ navigation, embedded = false }) {
   return (
     <View className="flex-1 bg-[#F8F9FA]">
       <DashboardHeader
-        roleLabel={roleLabel}
+        roleLabel={currentUserName}
         navigation={navigation}
         headerTitle={headerTitle}
         onMenuPress={() => setMenuOpen(true)}
@@ -644,7 +842,7 @@ export default function TwoYearPlanScreen({ navigation, embedded = false }) {
                       }))
                     }
                     onClose={closeMenu}
-                    userName={roleLabel}
+                    userName={currentUserName}
                     userSubtitle={headerTitle}
                     onChangePassword={() => {
                       setMenuOpen(false);

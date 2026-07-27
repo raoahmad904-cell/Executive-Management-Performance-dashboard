@@ -245,7 +245,7 @@ export const getDashboardDirectives = async (req, res) => {
       filter.status = status;
     }
 
-    // Map month name string (like 'July') to number (1-12)
+    // Map month name string (like 'July', 'November') to number (1-12)
     const MONTH_MAP = {
       january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
       july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
@@ -253,7 +253,7 @@ export const getDashboardDirectives = async (req, res) => {
 
     let monthNum = null;
     if (month && month !== 'All') {
-      const normalized = month.toLowerCase();
+      const normalized = String(month).toLowerCase();
       if (MONTH_MAP[normalized]) {
         monthNum = MONTH_MAP[normalized];
       } else {
@@ -261,34 +261,36 @@ export const getDashboardDirectives = async (req, res) => {
       }
     }
 
-    // Add month/year date filtering
-    if (year && year !== 'All') {
-      const y = Number(year);
-      if (monthNum !== null && !isNaN(monthNum)) {
-        const m = monthNum - 1; // 0-indexed in JS Dates
-        const start = new Date(Date.UTC(y, m, 1, 0, 0, 0, 0));
-        const end = new Date(Date.UTC(y, m + 1, 1, 0, 0, 0, 0));
-        filter.createdAt = { $gte: start, $lt: end };
-      } else {
-        const start = new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0));
-        const end = new Date(Date.UTC(y + 1, 0, 1, 0, 0, 0, 0));
-        filter.createdAt = { $gte: start, $lt: end };
-      }
-    } else if (monthNum !== null && !isNaN(monthNum)) {
-      filter.$expr = {
-        $eq: [{ $month: '$createdAt' }, monthNum]
-      };
-    }
+    const targetYear = (year && year !== 'All') ? Number(year) : null;
 
-    const totalCount = await Directive.countDocuments(filter);
-    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    // Fetch raw directives filtered by status
     const rawDirectives = await Directive.find(filter)
       .populate('user')
-      .skip((page - 1) * limit)
-      .limit(Number(limit))
       .sort({ createdAt: -1 });
 
-    const directives = rawDirectives.map(d => ({
+    // Filter by effective date (startDate / directiveDate / createdAt)
+    const filteredDirectives = rawDirectives.filter(d => {
+      const dateObj = parseCustomDate(d.startDate) || parseCustomDate(d.directiveDate) || parseCustomDate(d.createdAt);
+      if (!dateObj || isNaN(dateObj.getTime())) return true;
+
+      if (targetYear !== null && !isNaN(targetYear)) {
+        if (dateObj.getFullYear() !== targetYear) return false;
+      }
+
+      if (monthNum !== null && !isNaN(monthNum)) {
+        if (dateObj.getMonth() + 1 !== monthNum) return false;
+      }
+
+      return true;
+    });
+
+    const totalCount = filteredDirectives.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const p = Number(page);
+    const l = Number(limit);
+    const paginatedSlice = filteredDirectives.slice((p - 1) * l, p * l);
+
+    const directives = paginatedSlice.map(d => ({
       id: d._id.toString(),
       subject: d.subject,
       startDate: d.startDate || "N/A",

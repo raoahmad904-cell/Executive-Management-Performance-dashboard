@@ -6,6 +6,7 @@ const DirectiveMessageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   attachments: [{
     filename: String,
+    originalName: String,
     url: String,
     mimetype: String,
     size: Number

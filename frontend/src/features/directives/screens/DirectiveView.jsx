@@ -2,14 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,7 +22,7 @@ function MessageBubble({ message, currentUserId }) {
   const senderObj = message.sender || {};
   const senderId = typeof senderObj === "object" ? senderObj._id || senderObj.id : senderObj;
   const isMine = senderId === currentUserId;
-  const senderName = senderObj.name || "System";
+  const senderName = senderObj.name || "User";
   const senderDesig = senderObj.designation ? ` (${senderObj.designation})` : "";
   const timeStr = message.createdAt ? new Date(message.createdAt).toLocaleString("en-US", {
     month: "short",
@@ -31,22 +32,77 @@ function MessageBubble({ message, currentUserId }) {
     hour12: true
   }) : "";
 
+  const handleDownloadFile = (filename) => {
+    if (!filename) return;
+    const url = `${API_BASE_URL}api/directives/download/${filename}`;
+    Linking.openURL(url).catch(err => {
+      console.error("Failed to open URL:", err);
+      Alert.alert("Error", "Could not trigger attachment download.");
+    });
+  };
+
+  const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
+  const messageText = message.message || message.text || "";
+
   return (
     <View className={`mb-3 ${isMine ? "items-end" : "items-start"}`}>
       <Text className="mb-1 text-[11px] text-white/60">{timeStr}</Text>
       <View
         className={`max-w-[88%] rounded-2xl border px-3 py-2.5 ${
           isMine
-            ? "border-sky-300 bg-sky-100"
+            ? "border-emerald-700 bg-[#0F5D4A]"
             : "border-gray-200 bg-white"
         }`}
       >
-        <Text className="text-[13px] font-bold text-gray-900">
+        <Text className={`text-[12px] font-bold ${isMine ? "text-amber-300" : "text-[#0D4429]"}`}>
           {isMine ? "You:" : `${senderName}${senderDesig}:`}
         </Text>
-        <Text className="mt-1 text-[14px] leading-5 text-gray-800">
-          {message.message || message.text}
-        </Text>
+
+        {messageText ? (
+          <Text className={`mt-1 text-[14px] leading-5 ${isMine ? "text-white" : "text-gray-800"}`}>
+            {messageText}
+          </Text>
+        ) : null}
+
+        {/* Attachments rendering */}
+        {hasAttachments && (
+          <View className={`mt-2 gap-1.5 pt-1.5 ${messageText ? (isMine ? "border-t border-white/20" : "border-t border-gray-200") : ""}`}>
+            {message.attachments.map((att, idx) => {
+              const fname = att.filename || att.url;
+              const displayName = att.originalName || att.filename || "Attachment";
+              return (
+                <TouchableOpacity
+                  key={att._id || idx}
+                  onPress={() => handleDownloadFile(fname)}
+                  activeOpacity={0.75}
+                  className={`flex-row items-center rounded-lg px-2.5 py-1.5 ${
+                    isMine ? "bg-white/20" : "bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  <Ionicons
+                    name="document-attach-outline"
+                    size={16}
+                    color={isMine ? "#FFFFFF" : "#0D4429"}
+                  />
+                  <Text
+                    className={`ml-1.5 text-xs font-semibold flex-1 ${
+                      isMine ? "text-white" : "text-[#0D4429]"
+                    }`}
+                    numberOfLines={1}
+                  >
+                    {displayName}
+                  </Text>
+                  <Ionicons
+                    name="download-outline"
+                    size={16}
+                    color={isMine ? "#FFFFFF" : "#0D4429"}
+                    style={{ marginLeft: 6 }}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -94,6 +150,7 @@ export default function DirectiveView({ route, navigation }) {
       const picked = (result.assets ?? []).map((a) => ({
         name: a.name ?? "file",
         uri: a.uri,
+        mimeType: a.mimeType,
       }));
 
       setAttachments((prev) => [...prev, ...picked]);
@@ -111,15 +168,26 @@ export default function DirectiveView({ route, navigation }) {
 
     try {
       const token = await AsyncStorage.getItem("token");
+      const formData = new FormData();
+      if (reply.trim()) {
+        formData.append("message", reply.trim());
+      }
+
+      attachments.forEach((file) => {
+        const fileUri = Platform.OS === "android" ? file.uri : file.uri.replace("file://", "");
+        formData.append("attachments", {
+          uri: fileUri,
+          name: file.name || "attachment",
+          type: file.mimeType || file.type || "application/octet-stream"
+        });
+      });
+
       const res = await fetch(`${API_BASE_URL}api/directives/${directive.id}/reply`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          message: reply.trim()
-        })
+        body: formData
       });
 
       if (res.ok) {
@@ -128,7 +196,8 @@ export default function DirectiveView({ route, navigation }) {
         setReply("");
         setAttachments([]);
       } else {
-        Alert.alert("Error", "Failed to send message.");
+        const errJson = await res.json().catch(() => ({}));
+        Alert.alert("Error", errJson.error || "Failed to send message.");
       }
     } catch (error) {
       console.error("Error replying to directive:", error);
@@ -142,24 +211,24 @@ export default function DirectiveView({ route, navigation }) {
     <View className="flex-1 bg-[#F8F9FA]" style={{ paddingTop: insets.top }}>
       {/* Top bar */}
       <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-3 py-3">
-  <View className="flex-1 flex-row items-center mr-2">
-    <Ionicons name="chatbubble-ellipses-outline" size={20} color={ACCENT} />
-    <Text
-      className="ml-2 flex-1 text-[15px] font-bold text-gray-900"
-      numberOfLines={1}
-    >
-      {title}
-    </Text>
-  </View>
+        <View className="flex-1 flex-row items-center mr-2">
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={ACCENT} />
+          <Text
+            className="ml-2 flex-1 text-[15px] font-bold text-gray-900"
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        </View>
 
-  <TouchableOpacity
-    onPress={() => navigation.goBack()}
-    className="flex-row items-center rounded-xl bg-white px-4 py-2.5 border border-gray-200"
-    activeOpacity={0.8}
-  >
-    <Text className="text-[#1B5E3B] text-sm font-bold">← Back</Text>
-  </TouchableOpacity>
-</View>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="flex-row items-center rounded-xl bg-white px-4 py-2.5 border border-gray-200"
+          activeOpacity={0.8}
+        >
+          <Text className="text-[#1B5E3B] text-sm font-bold">← Back</Text>
+        </TouchableOpacity>
+      </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

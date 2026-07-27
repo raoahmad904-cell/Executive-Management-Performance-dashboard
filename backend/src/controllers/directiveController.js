@@ -1,5 +1,11 @@
 import Directive from '../models/Directive.js';
 import { updateOverdueStatuses } from './dashboardController.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create a new directive (can be assigned to multiple users)
 export const createDirective = async (req, res) => {
@@ -123,9 +129,23 @@ export const replyToDirective = async (req, res) => {
       return res.status(404).json({ error: 'Directive not found' });
     }
 
+    const attachmentsList = [];
+    if (req.files && Array.isArray(req.files)) {
+      req.files.forEach(file => {
+        attachmentsList.push({
+          filename: file.filename,
+          originalName: file.originalname,
+          url: file.filename,
+          mimetype: file.mimetype,
+          size: file.size
+        });
+      });
+    }
+
     directive.messages.push({
       sender: req.user._id,
       message: message || '',
+      attachments: attachmentsList,
       createdAt: new Date()
     });
 
@@ -139,4 +159,21 @@ export const replyToDirective = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+// Download Directive message attachment
+export const downloadDirectiveAttachment = (req, res) => {
+  const fileName = req.params.filename;
+  const filePath = path.join(__dirname, '../uploads/directives/', fileName);
+
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + fileName + '"');
+
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      if (!res.headersSent) {
+        res.status(404).json({ message: 'File not found' });
+      }
+    }
+  });
 };

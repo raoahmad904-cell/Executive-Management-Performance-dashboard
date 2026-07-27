@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useRef, useState, useEffect } from "react";
-import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, Linking, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../../../utils/utils.js";
 
 const ACCENT = "#0D4429";
 
@@ -10,7 +11,7 @@ function MessageBubble({ message, currentUserId }) {
   const senderObj = message.sender || {};
   const senderId = typeof senderObj === "object" ? senderObj._id || senderObj.id : senderObj;
   const isMine = senderId === currentUserId;
-  const senderName = senderObj.name || "System";
+  const senderName = senderObj.name || "User";
   const senderDesig = senderObj.designation ? ` (${senderObj.designation})` : "";
   const timeStr = message.createdAt ? new Date(message.createdAt).toLocaleString("en-US", {
     month: "short",
@@ -20,22 +21,77 @@ function MessageBubble({ message, currentUserId }) {
     hour12: true
   }) : "";
 
+  const handleDownloadFile = (filename) => {
+    if (!filename) return;
+    const url = `${API_BASE_URL}api/directives/download/${filename}`;
+    Linking.openURL(url).catch(err => {
+      console.error("Failed to open URL:", err);
+      Alert.alert("Error", "Could not trigger attachment download.");
+    });
+  };
+
+  const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
+  const messageText = message.message || message.text || "";
+
   return (
     <View className={`mb-3 ${isMine ? "items-end" : "items-start"}`}>
       <Text className="mb-1 text-[11px] text-white/60">{timeStr}</Text>
       <View
         className={`max-w-[88%] rounded-2xl border px-3 py-2.5 ${
           isMine
-            ? "border-sky-300 bg-sky-100"
+            ? "border-emerald-700 bg-[#0F5D4A]"
             : "border-gray-200 bg-white"
         }`}
       >
-        <Text className="text-[13px] font-bold text-gray-900">
+        <Text className={`text-[12px] font-bold ${isMine ? "text-amber-300" : "text-[#0D4429]"}`}>
           {isMine ? "You:" : `${senderName}${senderDesig}:`}
         </Text>
-        <Text className="mt-1 text-[14px] leading-5 text-gray-800">
-          {message.message || message.text}
-        </Text>
+
+        {messageText ? (
+          <Text className={`mt-1 text-[14px] leading-5 ${isMine ? "text-white" : "text-gray-800"}`}>
+            {messageText}
+          </Text>
+        ) : null}
+
+        {/* Attachments rendering */}
+        {hasAttachments && (
+          <View className={`mt-2 gap-1.5 pt-1.5 ${messageText ? (isMine ? "border-t border-white/20" : "border-t border-gray-200") : ""}`}>
+            {message.attachments.map((att, idx) => {
+              const fname = att.filename || att.url;
+              const displayName = att.originalName || att.filename || "Attachment";
+              return (
+                <TouchableOpacity
+                  key={att._id || idx}
+                  onPress={() => handleDownloadFile(fname)}
+                  activeOpacity={0.75}
+                  className={`flex-row items-center rounded-lg px-2.5 py-1.5 ${
+                    isMine ? "bg-white/20" : "bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  <Ionicons
+                    name="document-attach-outline"
+                    size={16}
+                    color={isMine ? "#FFFFFF" : "#0D4429"}
+                  />
+                  <Text
+                    className={`ml-1.5 text-xs font-semibold flex-1 ${
+                      isMine ? "text-white" : "text-[#0D4429]"
+                    }`}
+                    numberOfLines={1}
+                  >
+                    {displayName}
+                  </Text>
+                  <Ionicons
+                    name="download-outline"
+                    size={16}
+                    color={isMine ? "#FFFFFF" : "#0D4429"}
+                    style={{ marginLeft: 6 }}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
     </View>
   );

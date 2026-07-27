@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CommonActions } from "@react-navigation/native";
 import Constants from "expo-constants";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Image,
   Platform,
@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function DashboardHeader({
   roleLabel = "Test User",
@@ -19,12 +20,32 @@ export default function DashboardHeader({
   onMenuPress,
 }) {
   const [open, setOpen] = useState(false);
+  const [displayName, setDisplayName] = useState(roleLabel);
   const insets = useSafeAreaInsets();
   const statusBarFallback =
     Platform.OS === "android"
       ? StatusBar.currentHeight ?? 0
       : Constants.statusBarHeight ?? 0;
   const topInset = Math.max(insets.top, statusBarFallback);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const uStr = await AsyncStorage.getItem("user");
+        if (uStr) {
+          const u = JSON.parse(uStr);
+          if (u && u.name) {
+            setDisplayName(u.name);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching user in DashboardHeader:", err);
+      }
+      setDisplayName(roleLabel);
+    };
+    fetchUser();
+  }, [roleLabel]);
 
   return (
     <View style={{ paddingTop: topInset }} className="bg-white">
@@ -50,7 +71,7 @@ export default function DashboardHeader({
 
         <View className="flex-1" />
 
-        <View className="relative">
+        <View className="relative flex-shrink max-w-[210px]">
           <TouchableOpacity
             onPress={() => setOpen((v) => !v)}
             className="flex-row items-center gap-1 px-1 py-1"
@@ -59,10 +80,10 @@ export default function DashboardHeader({
           >
             <Ionicons name="person-circle-outline" size={26} color="#0A92E2" />
             <Text
-              className="max-w-[140px] text-[#0A92E2] font-semibold text-sm"
-              numberOfLines={1}
+              className="text-[#0A92E2] font-semibold text-xs leading-4 flex-shrink"
+              numberOfLines={2}
             >
-              {roleLabel}
+              {displayName}
             </Text>
           </TouchableOpacity>
 

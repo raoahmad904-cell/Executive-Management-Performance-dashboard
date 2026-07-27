@@ -49,6 +49,25 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
     (role === "user" ? "Test User" : "Test Management");
   const headerTitle = getDashboardHeaderTitle(role);
 
+  const [currentUserName, setCurrentUserName] = useState(roleLabel);
+
+  useEffect(() => {
+    const loadUserName = async () => {
+      try {
+        const uStr = await AsyncStorage.getItem("user");
+        if (uStr) {
+          const u = JSON.parse(uStr);
+          if (u && u.name) {
+            setCurrentUserName(u.name);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user in TwoYearPlanMemberDetails:", err);
+      }
+    };
+    loadUserName();
+  }, []);
+
   const nav = useNavigation();
   useLayoutEffect(() => {
     nav.setOptions({ title: `Two Year Plan - ${member?.name ?? "Member"}` });
@@ -352,7 +371,7 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
     <View className="flex-1 bg-[#F8F9FA]">
       {/* <View style={{ paddingTop: insets.top }} className="bg-white"> */}
       <DashboardHeader
-        roleLabel={roleLabel}
+        roleLabel={currentUserName}
         navigation={navigation}
         headerTitle={headerTitle}
         onMenuPress={() => setMenuOpen(true)}
@@ -559,7 +578,7 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
                       }))
                     }
                     onClose={closeMenu}
-                    userName={roleLabel}
+                    userName={currentUserName}
                     userSubtitle={headerTitle}
                     onChangePassword={() => {
                       setMenuOpen(false);

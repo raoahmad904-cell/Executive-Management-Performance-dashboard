@@ -48,6 +48,7 @@ export default function MinutesOfMeeting() {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [viewTargetItem, setViewTargetItem] = useState(null);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [showAttachSuccessModal, setShowAttachSuccessModal] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -126,12 +127,12 @@ export default function MinutesOfMeeting() {
       });
 
       if (res.ok) {
-        Alert.alert("Success", "Minutes of Meeting attached successfully!");
         setShowForm(false);
         setPage(0);
         if (currentUser) {
           await loadMoMs(currentUser);
         }
+        setShowAttachSuccessModal(true);
       } else {
         const errData = await res.json();
         Alert.alert("Error", errData.message || "Failed to attach Minutes of Meeting.");
@@ -654,7 +655,61 @@ export default function MinutesOfMeeting() {
                   justifyContent: 'center'
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff' }}>OK</Text>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Custom Attach Success Modal ────────────────────────────── */}
+      <Modal
+        visible={showAttachSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAttachSuccessModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 340,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 20, alignItems: 'center' }}>
+              <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 18, marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={42} color="#0D4429" />
+              </View>
+
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' }}>
+                Success
+              </Text>
+
+              <Text style={{ fontSize: 14, color: '#4B5563', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                Minutes of Meeting attached successfully!
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowAttachSuccessModal(false)}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  backgroundColor: '#0D4429',
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#ffffff', textAlign: 'center' }}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -412,6 +412,10 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
               const globalIdx = page * ITEMS_PER_PAGE + idx;
               const priC = PRIORITY_COLORS[task.priority] || { bg: 'bg-gray-100', text: 'text-gray-600', stripe: 'bg-gray-300' };
 
+              const taskUserId = task.user?._id || task.user?.id || (typeof task.user === 'string' ? task.user : null);
+              const currentUserId = currentUser?._id || currentUser?.id || (typeof currentUser === 'string' ? currentUser : null);
+              const isOwnTask = !isManagement || (taskUserId && currentUserId && String(taskUserId) === String(currentUserId));
+
               return (
                 <View
                   key={task.id}
@@ -475,7 +479,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
                         >
                           <Text className="text-[#1B5E3B] font-semibold text-sm">View</Text>
                         </TouchableOpacity>
-                        {!done && (
+                        {isOwnTask && !done && (
                           <TouchableOpacity
                             className="flex-1 py-2.5 rounded-xl bg-green-500 items-center"
                             onPress={() => onComplete(task.id, task.dateKey)}
@@ -484,7 +488,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
                             <Text className="text-white font-semibold text-sm">Complete</Text>
                           </TouchableOpacity>
                         )}
-                        {!done && (
+                        {isOwnTask && !done && (
                           <TouchableOpacity
                             className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-200 items-center"
                             onPress={() => setDeleteTargetTask(task)}

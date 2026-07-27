@@ -69,10 +69,10 @@ export default function SideMenu({
 
           {/* Name & Role */}
           <View className="flex-1">
-            <Text className="text-[20px] font-bold text-white leading-6" numberOfLines={1}>
+            <Text className="text-[18px] font-bold text-white leading-[22px]" numberOfLines={2}>
               {userName}
             </Text>
-            <Text className="text-[13px] font-medium text-white/80 mt-0.5" numberOfLines={1}>
+            <Text className="text-[12px] font-semibold text-white/90 mt-0.5 leading-[16px]">
               {userSubtitle}
             </Text>
           </View>

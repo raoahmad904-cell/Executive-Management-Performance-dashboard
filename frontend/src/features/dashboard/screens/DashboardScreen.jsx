@@ -35,8 +35,26 @@ export default function DashboardScreen({ route, navigation }) {
   const roleLabel = role === "user" ? "Test User" : "Test Management";
   const headerTitle = getDashboardHeaderTitle(role);
 
+  const [currentUserName, setCurrentUserName] = useState(roleLabel);
   const [pendingCount, setPendingCount] = useState(0);
   const [closedCount, setClosedCount] = useState(0);
+
+  useEffect(() => {
+    const loadUserName = async () => {
+      try {
+        const uStr = await AsyncStorage.getItem("user");
+        if (uStr) {
+          const u = JSON.parse(uStr);
+          if (u && u.name) {
+            setCurrentUserName(u.name);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading user in DashboardScreen:", err);
+      }
+    };
+    loadUserName();
+  }, []);
 
   const fetchDirectiveCounts = async () => {
     if (role === "user") return;
@@ -203,7 +221,7 @@ export default function DashboardScreen({ route, navigation }) {
                       }))
                     }
                     onClose={closeMenu}
-                    userName={roleLabel}
+                    userName={currentUserName}
                     userSubtitle={headerTitle}
                     onChangePassword={() => {
                       setMenuOpen(false);
