@@ -1,28 +1,35 @@
-# 📊 Performance Dashboard App
+# 📊 Executive Management Performance Dashboard App (Frontend)
 
-A mobile application built with Expo (React Native) to monitor and visualize performance metrics in a clean, user-friendly interface.
+This is the React Native (Expo) frontend for the **Executive Management Performance Dashboard App**.
 
-## 🚀 Overview
+---
 
+## 🚀 Quick Start
 
-## 🛠️ Tech Stack
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-* React Native (Expo)
-* JavaScript
-* REST APIs
-* Tailwind (NativeWind) for styling
+2. Configure backend API URL in `src/utils/utils.js`:
+   ```javascript
+   export const API_BASE_URL = "http://YOUR_LOCAL_IP:5000/"; // or production domain
+   ```
 
-## ▶️ Getting Started
+3. Start the Metro bundler:
+   ```bash
+   npx expo start
+   ```
 
-```bash
-npm install
-npx expo start
-```
+4. Press `a` for Android Emulator, `i` for iOS Simulator, or scan the QR code with **Expo Go**.
 
-## 📱 Features
+---
 
+## 🛠️ Main Features Included
+- **Interactive Calendar & Task Manager**
+- **Directives Tracking with Attachments & Downloads**
+- **Member's Two-Year Rolling Work Plan & PDF Exporting**
+- **Minutes of Meeting (MoM) Repository**
+- **Custom Enterprise Modal Popups & Dark Green `#0D4429` Design System**
 
-
-## 📌 Status
-
-In active development.
+For full project architecture, backend configuration, seed credentials, and production deployment guide, refer to the main **[Root README.md](../README.md)**.
