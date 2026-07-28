@@ -7,7 +7,8 @@ import {
     getMonthlyProgressStats,
     getDashboardStats,
     getDashboardTrend,
-    getDashboardDirectives
+    getDashboardDirectives,
+    getDashboardStatDetails
 } from '../controllers/dashboardController.js';
 import { auth } from '../middleware/auth.js';
 
@@ -17,6 +18,7 @@ router.use(auth);
 
 router.get('/', getDashboard);
 router.get('/stats', getDashboardStats);
+router.get('/stat-details', getDashboardStatDetails);
 router.get('/trend', getDashboardTrend);
 router.get('/directives', getDashboardDirectives);
 router.get('/weekly-stats', getWeeklyStats);

@@ -1,10 +1,12 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { Text, View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function StatCard({ label, value, color, iconName, bgTint, icon }) {
+export default function StatCard({ label, value, color, iconName, bgTint, icon, onPress }) {
   return (
-    <View
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
       className="flex-1 bg-white rounded-2xl mx-1 px-1.5 py-3.5 items-center border border-gray-100"
       style={{
         elevation: 3,
@@ -30,6 +32,6 @@ export default function StatCard({ label, value, color, iconName, bgTint, icon }
       <Text className="text-[11px] font-semibold text-gray-500 mt-0.5 text-center" numberOfLines={1}>
         {label}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }

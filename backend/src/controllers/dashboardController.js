@@ -461,3 +461,39 @@ export const getMonthlyProgressStats = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// 4. Get Detailed Items for Selected Dashboard Stat (Total / Completed / In Process / Overdue)
+export const getDashboardStatDetails = async (req, res) => {
+  try {
+    await updateOverdueStatuses();
+    const { facet = 'Directives', statType = 'Total', designation, officer } = req.query;
+    const filter = {};
+
+    if (officer && officer !== 'All') {
+      filter.user = officer;
+    } else if (designation && designation !== 'All') {
+      const users = await User.find({ designation });
+      const userIds = users.map(u => u._id);
+      filter.user = { $in: userIds };
+    }
+
+    if (statType && statType !== 'Total') {
+      filter.status = statType;
+    }
+
+    let items = [];
+    if (facet === 'Tasks') {
+      items = await Task.find(filter)
+        .populate('user', 'name designation sector')
+        .sort({ createdAt: -1 });
+    } else {
+      items = await Directive.find(filter)
+        .populate('user', 'name designation sector')
+        .sort({ createdAt: -1 });
+    }
+
+    res.json({ facet, statType, totalCount: items.length, items });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

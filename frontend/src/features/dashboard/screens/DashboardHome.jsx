@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useLayoutEffect, useState, useEffect } from "react";
-import { ScrollView, StatusBar, View } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
@@ -36,10 +37,40 @@ export default function DashboardHome() {
   const [stats, setStats] = useState({ total: 0, completed: 0, inProcess: 0, overdue: 0 });
   const [trendData, setTrendData] = useState(null);
 
+  // Stat card modal details state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalItems, setModalItems] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
+
   const nav = useNavigation();
   useLayoutEffect(() => {
     nav.setOptions({ title: `Dashboard` });
   }, [nav]);
+
+  const openStatDetails = (label, value) => {
+    setModalTitle(`${progressFacet} - ${label}`);
+    setModalVisible(true);
+    setModalLoading(true);
+    setModalItems([]);
+
+    AsyncStorage.getItem("token").then(token => {
+      fetch(
+        `${API_BASE_URL}api/dashboard/stat-details?facet=${progressFacet}&statType=${label}&designation=${designation}&officer=${officer}`,
+        { headers: { "Authorization": `Bearer ${token}` } }
+      )
+        .then(res => res.json())
+        .then(json => {
+          setModalItems(json.items || []);
+        })
+        .catch(err => {
+          console.error("Error fetching stat details:", err);
+        })
+        .finally(() => {
+          setModalLoading(false);
+        });
+    });
+  };
 
   // 1. Fetch officers list when designation changes
   useEffect(() => {
@@ -152,6 +183,7 @@ export default function DashboardHome() {
             color="#1a3a5c"
             iconName="bar-chart-outline"
             bgTint="#E8EEF5"
+            onPress={() => openStatDetails("Total", stats.total)}
           />
           <StatCard
             label="Completed"
@@ -159,6 +191,7 @@ export default function DashboardHome() {
             color="#15803d"
             iconName="checkmark-circle-outline"
             bgTint="#DCFCE7"
+            onPress={() => openStatDetails("Completed", stats.completed)}
           />
           <StatCard
             label="In Process"
@@ -166,6 +199,7 @@ export default function DashboardHome() {
             color="#1d4ed8"
             iconName="sync-outline"
             bgTint="#DBEAFE"
+            onPress={() => openStatDetails("In Process", stats.inProcess)}
           />
           <StatCard
             label="Overdue"
@@ -173,6 +207,7 @@ export default function DashboardHome() {
             color="#b91c1c"
             iconName="alert-circle-outline"
             bgTint="#FEE2E2"
+            onPress={() => openStatDetails("Overdue", stats.overdue)}
           />
         </View>
 
@@ -192,6 +227,171 @@ export default function DashboardHome() {
 
         <DirectivesSection />
       </ScrollView>
+
+      {/* ── Custom Stat Details Modal (Identical Style to Tasks & MoMs) ── */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 24,
+            borderWidth: 3,
+            borderColor: '#0D4429',
+            width: '100%',
+            maxWidth: 360,
+            padding: 8,
+            elevation: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10
+          }}>
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 18 }}>
+              {/* Header Icon + Title */}
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ backgroundColor: '#E6F4EA', borderRadius: 50, padding: 14 }}>
+                  <Ionicons name="bar-chart-outline" size={34} color="#0D4429" />
+                </View>
+                <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#111827', marginTop: 10, textAlign: 'center' }}>
+                  {modalTitle}{modalLoading ? '' : ` (${modalItems.length})`}
+                </Text>
+              </View>
+
+              {/* Modal Body */}
+              {modalLoading ? (
+                <View style={{ paddingVertical: 35, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color="#0D4429" />
+                  <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 8 }}>Loading items...</Text>
+                </View>
+              ) : modalItems.length === 0 ? (
+                <View style={{ paddingVertical: 35, alignItems: 'center' }}>
+                  <Ionicons name="folder-open-outline" size={36} color="#9CA3AF" />
+                  <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 8 }}>No records found.</Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={{ maxHeight: 360 }}
+                  contentContainerStyle={{ paddingBottom: 10 }}
+                  showsVerticalScrollIndicator={true}
+                >
+                  <View style={{ gap: 10 }}>
+                    {modalItems.map((item, idx) => {
+                      const titleStr = item.subject || item.title || "Untitled";
+                      const isCompleted = item.status === 'Completed';
+                      const isOverdue = item.status === 'Overdue';
+                      const statusBg = isCompleted ? '#DCFCE7' : isOverdue ? '#FEE2E2' : '#DBEAFE';
+                      const statusColor = isCompleted ? '#15803D' : isOverdue ? '#B91C1C' : '#1D4ED8';
+
+                      const prio = item.priority || 'Medium';
+                      const prioBg = String(prio).toLowerCase() === 'high' ? '#FEE2E2' : String(prio).toLowerCase() === 'medium' ? '#FEF3C7' : '#F3F4F6';
+                      const prioColor = String(prio).toLowerCase() === 'high' ? '#B91C1C' : String(prio).toLowerCase() === 'medium' ? '#B45309' : '#374151';
+
+                      const uName = item.user?.name || "Unassigned";
+                      const uDesig = item.user?.designation ? ` (${item.user.designation})` : "";
+
+                      const formatDateClean = (dateVal) => {
+                        if (!dateVal) return "";
+                        const str = String(dateVal).trim();
+                        if (str.includes("T")) {
+                          return str.split("T")[0];
+                        }
+                        if (str.length > 10) {
+                          const d = new Date(str);
+                          if (!isNaN(d.getTime())) {
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
+                          }
+                        }
+                        return str;
+                      };
+
+                      const startStr = formatDateClean(item.startDate || item.directiveDate);
+                      const endStr = formatDateClean(item.endDate);
+
+                      return (
+                        <View
+                          key={item._id || idx}
+                          style={{
+                            backgroundColor: '#F9FAFB',
+                            borderRadius: 14,
+                            padding: 12,
+                            borderWidth: 1,
+                            borderColor: '#E5E7EB'
+                          }}
+                        >
+                          {/* Row 1: Title & Status Badge */}
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', flex: 1, marginRight: 8, lineHeight: 20 }}>
+                              #{idx + 1}. {titleStr}
+                            </Text>
+                            <View style={{ backgroundColor: statusBg, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 12 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: statusColor }}>
+                                {item.status || 'In Process'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Row 2: User Name & Designation */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                            <Ionicons name="person-circle-outline" size={15} color="#0D4429" style={{ marginRight: 5 }} />
+                            <Text style={{ fontSize: 12, color: '#374151', fontWeight: '600', flex: 1 }} numberOfLines={2}>
+                              {uName}{uDesig}
+                            </Text>
+                          </View>
+
+                          {/* Row 3: Priority Badge */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                            <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '600', marginRight: 6 }}>Priority:</Text>
+                            <View style={{ backgroundColor: prioBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: prioColor }}>
+                                {String(prio).toUpperCase()}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Row 4: Clean Formatted Dates */}
+                          {(startStr || endStr) ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 6, borderTopWidth: 1, borderTopColor: '#F3F4F6', gap: 12 }}>
+                              <Ionicons name="calendar-outline" size={13} color="#6B7280" style={{ marginRight: -4 }} />
+                              {startStr ? (
+                                <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Start: <Text style={{ fontWeight: '700', color: '#374151' }}>{startStr}</Text></Text>
+                              ) : null}
+                              {endStr ? (
+                                <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>End: <Text style={{ fontWeight: '700', color: '#374151' }}>{endStr}</Text></Text>
+                              ) : null}
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              )}
+
+              {/* Close Button */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#0D4429',
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  marginTop: 14
+                }}
+                activeOpacity={0.8}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 15 }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
