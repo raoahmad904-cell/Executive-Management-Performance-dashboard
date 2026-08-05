@@ -47,5 +47,31 @@ function formatCompletedAt(dateStr) {
     );
 }
 
-export { buildGrid, fmtDate, API_BASE_URL, formatCompletedAt };
+// Windowed page-number list for pagination controls, e.g. for page=6, total=29:
+// [1, '...', 5, 6, 7, '...', 29] instead of rendering all 29 buttons.
+function getPaginationRange(current, total, siblingCount = 1) {
+  const totalNumbers = siblingCount * 2 + 5; // first + last + current + 2 siblings + 2 ellipsis slots
+  if (total <= totalNumbers) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const leftSibling = Math.max(current - siblingCount, 1);
+  const rightSibling = Math.min(current + siblingCount, total);
+  const showLeftEllipsis = leftSibling > 2;
+  const showRightEllipsis = rightSibling < total - 1;
+
+  if (!showLeftEllipsis && showRightEllipsis) {
+    const leftRange = Array.from({ length: 3 + siblingCount * 2 }, (_, i) => i + 1);
+    return [...leftRange, '...', total];
+  }
+  if (showLeftEllipsis && !showRightEllipsis) {
+    const rightCount = 3 + siblingCount * 2;
+    const rightRange = Array.from({ length: rightCount }, (_, i) => total - rightCount + i + 1);
+    return [1, '...', ...rightRange];
+  }
+  const middleRange = Array.from({ length: rightSibling - leftSibling + 1 }, (_, i) => leftSibling + i);
+  return [1, '...', ...middleRange, '...', total];
+}
+
+export { buildGrid, fmtDate, API_BASE_URL, formatCompletedAt, getPaginationRange };
 

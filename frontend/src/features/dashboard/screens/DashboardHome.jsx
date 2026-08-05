@@ -35,6 +35,7 @@ export default function DashboardHome() {
   const [officer, setOfficer] = useState("All");
   const [officerOptions, setOfficerOptions] = useState([{ label: "All", value: "All" }]);
   const [stats, setStats] = useState({ total: 0, completed: 0, inProcess: 0, overdue: 0 });
+  const [statLists, setStatLists] = useState({ completed: [], inProcess: [], overdue: [] });
   const [trendData, setTrendData] = useState(null);
 
   // Stat card modal details state
@@ -48,31 +49,16 @@ export default function DashboardHome() {
     nav.setOptions({ title: `Dashboard` });
   }, [nav]);
 
-  const openStatDetails = (label, value) => {
+  const openStatDetails = (label, items) => {
     setModalTitle(`${progressFacet} - ${label}`);
+    setModalItems(items);
+    setModalLoading(false);
     setModalVisible(true);
-    setModalLoading(true);
-    setModalItems([]);
-
-    AsyncStorage.getItem("token").then(token => {
-      fetch(
-        `${API_BASE_URL}api/dashboard/stat-details?facet=${progressFacet}&statType=${label}&designation=${designation}&officer=${officer}`,
-        { headers: { "Authorization": `Bearer ${token}` } }
-      )
-        .then(res => res.json())
-        .then(json => {
-          setModalItems(json.items || []);
-        })
-        .catch(err => {
-          console.error("Error fetching stat details:", err);
-        })
-        .finally(() => {
-          setModalLoading(false);
-        });
-    });
   };
 
-  // 1. Fetch officers list when designation changes
+  // 1. Fetch officers list when designation changes.
+  // Sourced from the plain, unfiltered /api/auth/users list (pre-existing,
+  // untouched endpoint) and filtered client-side by designation.
   useEffect(() => {
     setOfficer("All");
     if (designation === "All") {
@@ -83,12 +69,13 @@ export default function DashboardHome() {
     const fetchOfficers = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_BASE_URL}api/auth/users?designation=${designation}`, {
+        const res = await fetch(`${API_BASE_URL}api/auth/users`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
           const data = await res.json();
-          const options = [{ label: "All", value: "All" }, ...data.map(u => ({ label: u.name, value: u._id }))];
+          const matching = data.filter(u => u.designation === designation);
+          const options = [{ label: "All", value: "All" }, ...matching.map(u => ({ label: u.name, value: u._id }))];
           setOfficerOptions(options);
         }
       } catch (err) {
@@ -98,36 +85,166 @@ export default function DashboardHome() {
     fetchOfficers();
   }, [designation]);
 
-  // 2. Fetch stats and trends when filters change
+  function isPastDate(dateVal) {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+  }
+
+  function parseDateSafe(v) {
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // Yearly trend (12 calendar-month buckets for the current year), computed
+  // from the same filtered raw records used for the stat cards - no extra
+  // network call, no backend trend endpoint.
+  function computeTrend(records, facet) {
+    const currentYear = new Date().getFullYear();
+    const months = [];
+    for (let m = 0; m < 12; m++) {
+      months.push({
+        start: new Date(currentYear, m, 1, 0, 0, 0, 0),
+        end: new Date(currentYear, m + 1, 0, 23, 59, 59, 999),
+      });
+    }
+    const assigned = Array(12).fill(0);
+    const completed = Array(12).fill(0);
+    const overdue = Array(12).fill(0);
+    const inProcess = Array(12).fill(0);
+    const currentMonthIdx = new Date().getMonth();
+
+    for (let m = 0; m < 12; m++) {
+      const period = months[m];
+      records.forEach(record => {
+        let S, C, D;
+        if (facet === "Tasks") {
+          S = parseDateSafe(record.startDate) || parseDateSafe(record.createdAt);
+          C = record.completed
+            ? (parseDateSafe(record.completedAt) || parseDateSafe(record.updatedAt) || parseDateSafe(record.expectedEndDate) || parseDateSafe(record.createdAt))
+            : null;
+          D = parseDateSafe(record.expectedEndDate);
+        } else {
+          S = parseDateSafe(record.duration?.start) || parseDateSafe(record.directiveDate) || parseDateSafe(record.createdAt);
+          C = record.status === "closed"
+            ? (parseDateSafe(record.closedAt) || parseDateSafe(record.updatedAt) || parseDateSafe(record.duration?.end) || parseDateSafe(record.createdAt))
+            : null;
+          D = parseDateSafe(record.duration?.end);
+        }
+        if (!S) return;
+        S = new Date(S); S.setHours(0, 0, 0, 0);
+        if (C) { C = new Date(C); C.setHours(0, 0, 0, 0); }
+        if (D) { D = new Date(D); D.setHours(0, 0, 0, 0); }
+
+        if (S >= period.start && S <= period.end) assigned[m]++;
+        if (C && C >= period.start && C <= period.end) completed[m]++;
+        if (m <= currentMonthIdx && D && D <= period.end) {
+          if (!C || C > period.end) overdue[m]++;
+        }
+        if (S <= period.end) {
+          const notCompletedYet = !C || C >= period.start;
+          const notOverdueYet = !D || D >= period.start;
+          if (notCompletedYet && notOverdueYet) inProcess[m]++;
+        }
+      });
+    }
+    return { assigned, completed, overdue, inProcess };
+  }
+
+  // 2. Fetch stats when filters change. Computed entirely on the frontend
+  // from the raw, pre-existing list endpoints (no dedicated backend
+  // stats/trend endpoint is used):
+  //   Directives -> GET /api/directive/threads (unfiltered = every thread)
+  //   Tasks      -> GET /api/calendar/tasks/all-non-management
   useEffect(() => {
-    const fetchStatsAndTrends = async () => {
+    const fetchStats = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-        
-        // Fetch Stats
-        const statsRes = await fetch(
-          `${API_BASE_URL}api/dashboard/stats?facet=${progressFacet}&designation=${designation}&officer=${officer}`, 
-          { headers: { "Authorization": `Bearer ${token}` } }
-        );
-        if (statsRes.ok) {
-          const data = await statsRes.json();
-          setStats(data);
+
+        let completed = [];
+        let inProcess = [];
+        let overdue = [];
+        let matchedRaw = [];
+
+        if (progressFacet === "Tasks") {
+          const res = await fetch(`${API_BASE_URL}api/calendar/tasks/all-non-management`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
+          const tasks = await res.json();
+
+          tasks.forEach(t => {
+            const uid = t.user?._id || t.user;
+            const uDesig = t.user?.designation;
+            if (officer !== "All" && String(uid) !== String(officer)) return;
+            if (officer === "All" && designation !== "All" && uDesig !== designation) return;
+
+            matchedRaw.push(t);
+            const normalized = {
+              _id: t._id,
+              subject: t.name,
+              status: t.completed ? "Completed" : (isPastDate(t.expectedEndDate) ? "Overdue" : "In Process"),
+              priority: t.priority,
+              user: t.user ? { name: t.user.name, designation: t.user.designation } : null,
+              startDate: t.startDate,
+              endDate: t.expectedEndDate,
+            };
+            if (normalized.status === "Completed") completed.push(normalized);
+            else if (normalized.status === "Overdue") overdue.push(normalized);
+            else inProcess.push(normalized);
+          });
+        } else {
+          const res = await fetch(`${API_BASE_URL}api/directive/threads`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error(`Server responded with status ${res.status}`);
+          const threads = await res.json();
+
+          threads.forEach(d => {
+            const members = d.members || [];
+            const matchesOfficer = officer !== "All" && members.some(m => String(m?._id) === String(officer));
+            const matchesDesignation = officer === "All" && designation !== "All" && members.some(m => m?.designation === designation);
+            const matchesAll = officer === "All" && designation === "All";
+            if (!(matchesOfficer || matchesDesignation || matchesAll)) return;
+
+            matchedRaw.push(d);
+            const member = members[0];
+            const normalized = {
+              _id: d._id,
+              subject: d.subject,
+              status: d.status === "closed" ? "Completed" : (isPastDate(d.duration?.end) ? "Overdue" : "In Process"),
+              priority: d.priority,
+              user: member ? { name: member.name, designation: member.designation } : null,
+              startDate: d.duration?.start,
+              endDate: d.duration?.end,
+            };
+            if (normalized.status === "Completed") completed.push(normalized);
+            else if (normalized.status === "Overdue") overdue.push(normalized);
+            else inProcess.push(normalized);
+          });
         }
 
-        // Fetch Trends
-        const trendRes = await fetch(
-          `${API_BASE_URL}api/dashboard/trend?facet=${progressFacet}&designation=${designation}&officer=${officer}`, 
-          { headers: { "Authorization": `Bearer ${token}` } }
-        );
-        if (trendRes.ok) {
-          const trendJson = await trendRes.json();
-          setTrendData(trendJson);
-        }
+        setStatLists({ completed, inProcess, overdue });
+        setStats({
+          total: completed.length + inProcess.length + overdue.length,
+          completed: completed.length,
+          inProcess: inProcess.length,
+          overdue: overdue.length,
+        });
+        setTrendData(computeTrend(matchedRaw, progressFacet));
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching dashboard stats:", err);
+        setStatLists({ completed: [], inProcess: [], overdue: [] });
+        setStats({ total: 0, completed: 0, inProcess: 0, overdue: 0 });
+        setTrendData(null);
       }
     };
-    fetchStatsAndTrends();
+    fetchStats();
   }, [progressFacet, designation, officer]);
 
   return (
@@ -183,7 +300,7 @@ export default function DashboardHome() {
             color="#1a3a5c"
             iconName="bar-chart-outline"
             bgTint="#E8EEF5"
-            onPress={() => openStatDetails("Total", stats.total)}
+            onPress={() => openStatDetails("Total", [...statLists.completed, ...statLists.inProcess, ...statLists.overdue])}
           />
           <StatCard
             label="Completed"
@@ -191,7 +308,7 @@ export default function DashboardHome() {
             color="#15803d"
             iconName="checkmark-circle-outline"
             bgTint="#DCFCE7"
-            onPress={() => openStatDetails("Completed", stats.completed)}
+            onPress={() => openStatDetails("Completed", statLists.completed)}
           />
           <StatCard
             label="In Process"
@@ -199,7 +316,7 @@ export default function DashboardHome() {
             color="#1d4ed8"
             iconName="sync-outline"
             bgTint="#DBEAFE"
-            onPress={() => openStatDetails("In Process", stats.inProcess)}
+            onPress={() => openStatDetails("In Process", statLists.inProcess)}
           />
           <StatCard
             label="Overdue"
@@ -207,7 +324,7 @@ export default function DashboardHome() {
             color="#b91c1c"
             iconName="alert-circle-outline"
             bgTint="#FEE2E2"
-            onPress={() => openStatDetails("Overdue", stats.overdue)}
+            onPress={() => openStatDetails("Overdue", statLists.overdue)}
           />
         </View>
 

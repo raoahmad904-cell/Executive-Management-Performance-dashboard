@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE_URL } from "../../../utils/utils.js";
+import { API_BASE_URL, getPaginationRange } from "../../../utils/utils.js";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import CustomDropdownLabel from "../../../components/forms/CustomDropdownLabel";
 import DirectiveCard from "./DirectiveCard";
@@ -29,32 +29,43 @@ const STATUS_OPTIONS = [
   { label: "In Process", value: "In Process" },
 ];
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function isPastDate(dateVal) {
+  if (!dateVal) return false;
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d < today;
+}
+
 export default function DirectivesSection() {
   const [month, setMonth] = useState("All");
   const [year, setYear] = useState("All");
   const [status, setStatus] = useState("All");
   const [page, setPage] = useState(1);
-  
-  const [directives, setDirectives] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+
+  const [allThreads, setAllThreads] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch directives list from backend
+  // Fetch every directive thread once from the pre-existing endpoint;
+  // month/year/status filtering and pagination are computed client-side.
   useEffect(() => {
-    const fetchDirectives = async () => {
+    const fetchThreads = async () => {
       setLoading(true);
       try {
         const token = await AsyncStorage.getItem("token");
-        const res = await fetch(
-          `${API_BASE_URL}api/dashboard/directives?month=${month}&year=${year}&status=${status}&page=${page}&limit=${PAGE_SIZE}`,
-          { headers: { "Authorization": `Bearer ${token}` } }
-        );
+        const res = await fetch(`${API_BASE_URL}api/directive/threads`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (res.ok) {
           const data = await res.json();
-          setDirectives(data.directives || []);
-          setTotalPages(data.totalPages || 1);
-          setTotalCount(data.totalCount || 0);
+          setAllThreads(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error("Directives fetch error:", err);
@@ -62,8 +73,41 @@ export default function DirectivesSection() {
         setLoading(false);
       }
     };
-    fetchDirectives();
-  }, [month, year, status, page]);
+    fetchThreads();
+  }, []);
+
+  const filtered = allThreads
+    .map(d => {
+      const effectiveDate = d.duration?.start || d.directiveDate || d.createdAt;
+      const derivedStatus = d.status === "closed" ? "Completed" : (isPastDate(d.duration?.end) ? "Overdue" : "In Process");
+      return { raw: d, effectiveDate, derivedStatus };
+    })
+    .filter(({ effectiveDate, derivedStatus }) => {
+      if (status !== "All" && derivedStatus !== status) return false;
+      if (month !== "All" || year !== "All") {
+        const dateObj = effectiveDate ? new Date(effectiveDate) : null;
+        if (!dateObj || isNaN(dateObj.getTime())) return false;
+        if (year !== "All" && String(dateObj.getFullYear()) !== year) return false;
+        if (month !== "All" && MONTH_NAMES[dateObj.getMonth()] !== month) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => new Date(b.raw.createdAt) - new Date(a.raw.createdAt))
+    .map(({ raw, derivedStatus }) => {
+      const member = (raw.members || [])[0];
+      return {
+        id: raw._id,
+        subject: raw.subject,
+        startDate: raw.duration?.start || "N/A",
+        endDate: raw.duration?.end || "N/A",
+        status: derivedStatus,
+        users: member ? member.name : "N/A",
+      };
+    });
+
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const directives = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleStatusTab = (s) => {
     setStatus(s);
@@ -175,7 +219,7 @@ export default function DirectivesSection() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <View className="flex-row items-center justify-center gap-2 mt-2 mb-4">
+        <View className="flex-row flex-wrap items-center justify-center gap-2 mt-2 mb-4">
           <TouchableOpacity
             onPress={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
@@ -184,15 +228,21 @@ export default function DirectivesSection() {
             <Text className={`text-sm ${page === 1 ? "text-gray-300" : "text-gray-600"}`}>‹</Text>
           </TouchableOpacity>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <TouchableOpacity
-              key={p}
-              onPress={() => setPage(p)}
-              className={`w-8 h-8 rounded-lg items-center justify-center ${page === p ? "bg-[#0D4429]" : "bg-white border border-gray-200"}`}
-            >
-              <Text className={`text-xs font-bold ${page === p ? "text-white" : "text-gray-600"}`}>{p}</Text>
-            </TouchableOpacity>
-          ))}
+          {getPaginationRange(page, totalPages).map((p, idx) =>
+            p === '...' ? (
+              <View key={`ellipsis-${idx}`} className="w-8 h-8 items-center justify-center">
+                <Text className="text-xs font-bold text-gray-400">…</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                key={p}
+                onPress={() => setPage(p)}
+                className={`w-8 h-8 rounded-lg items-center justify-center ${page === p ? "bg-[#0D4429]" : "bg-white border border-gray-200"}`}
+              >
+                <Text className={`text-xs font-bold ${page === p ? "text-white" : "text-gray-600"}`}>{p}</Text>
+              </TouchableOpacity>
+            )
+          )}
 
           <TouchableOpacity
             onPress={() => setPage((p) => Math.min(totalPages, p + 1))}
