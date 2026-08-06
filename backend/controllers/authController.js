@@ -90,10 +90,7 @@ exports.loginUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const { designation } = req.query;
-    const filter = {};
-    if (designation && designation !== 'All') filter.designation = designation;
-    const users = await User.find(filter, '-password'); // Exclude password, include disabled
+    const users = await User.find({}, '-password'); // Exclude password, include disabled
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });

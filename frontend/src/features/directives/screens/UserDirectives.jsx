@@ -19,13 +19,13 @@ export default function UserDirectives() {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      const endpoint = activeTab === "existing" ? "api/directives/pending" : "api/directives/closed";
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      // userType=member scopes this server-side to the logged-in user's own directives
+      const res = await fetch(`${API_BASE_URL}api/directive/threads?userType=member`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setDirectives(data);
+        setDirectives(data.filter(d => activeTab === "existing" ? d.status !== "closed" : d.status === "closed"));
       }
     } catch (error) {
       console.error("Error loading user directives:", error);
@@ -48,18 +48,19 @@ export default function UserDirectives() {
       const diffTime = Math.max(0, today - createdDate);
       const pendingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-      const endDate = new Date(d.endDate);
+      const endDate = new Date(d.duration?.end);
       const diffRemaining = endDate - today;
       const remainingDays = Math.ceil(diffRemaining / (1000 * 60 * 60 * 24));
       const remaining = remainingDays > 0 ? `${remainingDays} days left` : "Overdue";
 
+      const member = (d.members || [])[0];
       return {
         id: d._id,
         title: d.subject,
         priority: d.priority ? d.priority.charAt(0).toUpperCase() + d.priority.slice(1) : "Medium",
-        type: d.directiveType === "minister" ? "Minister Directive" : d.directiveType === "meeting" ? "Meeting Directive" : "Minister Directive",
-        assignee: d.user ? `${d.user.name} (${d.user.designation})` : "Unassigned",
-        assigneeUserId: d.user?._id,
+        type: d.type || "Minister Directive",
+        assignee: member ? `${member.name} (${member.designation})` : "Unassigned",
+        assigneeUserId: member?._id,
         owner: "Management",
         createdAt: new Date(d.createdAt).toLocaleDateString(),
         closedAt: d.closedAt ? new Date(d.closedAt).toLocaleDateString() : new Date().toLocaleDateString(),

@@ -385,6 +385,12 @@ export default function MinutesRepository() {
 
       await Print.printAsync({ html: htmlContent });
     } catch (err) {
+      // "Printing did not complete" fires when the user cancels/dismisses the
+      // native print dialog (or no print service is configured on the device/
+      // emulator) - not an actual failure to generate the PDF, so don't alert.
+      if (String(err?.message || "").toLowerCase().includes("did not complete")) {
+        return;
+      }
       console.error("Print error:", err);
       Alert.alert("Error", "Could not generate print document.");
     }

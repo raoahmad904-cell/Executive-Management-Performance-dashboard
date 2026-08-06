@@ -23,13 +23,13 @@ export default function DirectivesClosed({ showUserFilter = true }) {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      // 1. Fetch closed directives
-      const res = await fetch(`${API_BASE_URL}api/directives/closed`, {
+      // 1. Fetch all directive threads and keep only the closed ones
+      const res = await fetch(`${API_BASE_URL}api/directive/threads`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setDirectives(data);
+        setDirectives(data.filter(d => d.status === "closed"));
       }
 
       // 2. Fetch users for dropdown filtering
@@ -56,16 +56,19 @@ export default function DirectivesClosed({ showUserFilter = true }) {
   }, []);
 
   const formattedDirectives = useMemo(() => {
-    return directives.map(d => ({
-      id: d._id,
-      title: d.subject,
-      priority: d.priority ? d.priority.charAt(0).toUpperCase() + d.priority.slice(1) : "Medium",
-      type: d.directiveType === "minister" ? "Minister Directive" : d.directiveType === "meeting" ? "Meeting Directive" : "Minister Directive",
-      assignee: d.user ? `${d.user.name} (${d.user.designation})` : "Unassigned",
-      assigneeUserId: d.user?._id,
-      closedAt: d.closedAt ? new Date(d.closedAt).toLocaleDateString() : new Date().toLocaleDateString(),
-      messages: d.messages || []
-    }));
+    return directives.map(d => {
+      const member = (d.members || [])[0];
+      return {
+        id: d._id,
+        title: d.subject,
+        priority: d.priority ? d.priority.charAt(0).toUpperCase() + d.priority.slice(1) : "Medium",
+        type: d.type || "Minister Directive",
+        assignee: member ? `${member.name} (${member.designation})` : "Unassigned",
+        assigneeUserId: member?._id,
+        closedAt: d.closedAt ? new Date(d.closedAt).toLocaleDateString() : new Date().toLocaleDateString(),
+        messages: d.messages || []
+      };
+    });
   }, [directives]);
 
   const filtered = useMemo(() => {

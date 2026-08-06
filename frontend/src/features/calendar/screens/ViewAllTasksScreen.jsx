@@ -297,6 +297,12 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
 
       await Print.printAsync({ html });
     } catch (error) {
+      // "Printing did not complete" fires when the user cancels/dismisses the
+      // native print dialog (or no print service is configured on the device/
+      // emulator) - not an actual failure to generate the PDF, so don't alert.
+      if (String(error?.message || "").toLowerCase().includes("did not complete")) {
+        return;
+      }
       console.error("Print Error:", error);
       Alert.alert("Print Failed", "An error occurred while preparing the PDF for printing.");
     }

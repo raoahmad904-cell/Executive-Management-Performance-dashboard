@@ -48,6 +48,17 @@ const SECTIONS = [
 const QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
 const ACCENT = "#0D4429";
 
+async function getCurrentUserId() {
+  const uStr = await AsyncStorage.getItem("user");
+  if (!uStr) return null;
+  try {
+    const u = JSON.parse(uStr);
+    return u._id || u.id || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Two Year Plan editor body (used inside Dashboard or inside standalone shell). */
 function TwoYearPlanEditorBody() {
   const [activeYear, setActiveYear] = useState("2025");
@@ -85,11 +96,13 @@ function TwoYearPlanEditorBody() {
       setLoading(true);
       try {
         const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_BASE_URL}api/two-year-plan`, {
+        const userId = await getCurrentUserId();
+        const res = await fetch(`${API_BASE_URL}api/form/two-year-plan?user=${userId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
-          const data = await res.json();
+          const plans = await res.json();
+          const data = Array.isArray(plans) ? plans[0] : plans;
           if (data && data._id) {
             setPlanId(data._id);
             setIsSubmitted(data.status === 'Submitted');
@@ -144,7 +157,9 @@ function TwoYearPlanEditorBody() {
     }
     try {
       const token = await AsyncStorage.getItem("token");
+      const userId = await getCurrentUserId();
       const payload = {
+        user: userId,
         status: 'Saved',
         plan: formatPlanForAPI()
       };
@@ -152,7 +167,7 @@ function TwoYearPlanEditorBody() {
         payload._id = planId;
       }
 
-      const res = await fetch(`${API_BASE_URL}api/two-year-plan/submit`, {
+      const res = await fetch(`${API_BASE_URL}api/form/two-year-plan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -189,7 +204,9 @@ function TwoYearPlanEditorBody() {
   async function executeSubmitPlan() {
     try {
       const token = await AsyncStorage.getItem("token");
+      const userId = await getCurrentUserId();
       const payload = {
+        user: userId,
         status: 'Submitted',
         plan: formatPlanForAPI()
       };
@@ -197,7 +214,7 @@ function TwoYearPlanEditorBody() {
         payload._id = planId;
       }
 
-      const res = await fetch(`${API_BASE_URL}api/two-year-plan/submit`, {
+      const res = await fetch(`${API_BASE_URL}api/form/two-year-plan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

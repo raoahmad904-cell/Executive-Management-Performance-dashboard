@@ -60,13 +60,13 @@ export default function DashboardScreen({ route, navigation }) {
     if (role === "user") return;
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/dashboard/stats?facet=Directives`, {
+      const res = await fetch(`${API_BASE_URL}api/directive/threads`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        const data = await res.json();
-        setPendingCount((data.inProcess || 0) + (data.overdue || 0));
-        setClosedCount(data.completed || 0);
+        const threads = await res.json();
+        setPendingCount(threads.filter(t => t.status !== "closed").length);
+        setClosedCount(threads.filter(t => t.status === "closed").length);
       }
     } catch (error) {
       console.error("Error fetching directive counts:", error);

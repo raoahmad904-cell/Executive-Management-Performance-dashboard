@@ -147,12 +147,12 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
       setLoading(true);
       try {
         const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_BASE_URL}api/two-year-plan/${member.id}`, {
+        const res = await fetch(`${API_BASE_URL}api/form/two-year-plan?user=${member.id}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
-          const data = await res.json();
-          setPlan(data);
+          const plans = await res.json();
+          setPlan(Array.isArray(plans) ? plans[0] : plans);
         }
       } catch (err) {
         console.error("Error loading member plan:", err);
@@ -362,6 +362,12 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
 
       await Print.printAsync({ html });
     } catch (error) {
+      // "Printing did not complete" fires when the user cancels/dismisses the
+      // native print dialog (or no print service is configured on the device/
+      // emulator) - not an actual failure to generate the PDF, so don't alert.
+      if (String(error?.message || "").toLowerCase().includes("did not complete")) {
+        return;
+      }
       console.error("Print Error:", error);
       Alert.alert("Print Failed", "An error occurred while preparing the PDF for printing.");
     }

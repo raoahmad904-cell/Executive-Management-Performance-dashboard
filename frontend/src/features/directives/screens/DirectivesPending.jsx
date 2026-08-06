@@ -29,13 +29,13 @@ export default function DirectivesPending() {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      // 1. Fetch pending directives
-      const res = await fetch(`${API_BASE_URL}api/directives/pending`, {
+      // 1. Fetch all directive threads and keep only the non-closed ones
+      const res = await fetch(`${API_BASE_URL}api/directive/threads`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        setDirectives(data);
+        setDirectives(data.filter(d => d.status !== "closed"));
       }
 
       // 2. Fetch users for dropdown filtering
@@ -68,18 +68,19 @@ export default function DirectivesPending() {
       const pendingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       // Calculate remaining days
-      const endDate = new Date(d.endDate);
+      const endDate = new Date(d.duration?.end);
       const diffRemaining = endDate - today;
       const remainingDays = Math.ceil(diffRemaining / (1000 * 60 * 60 * 24));
       const remaining = remainingDays > 0 ? `${remainingDays} days left` : "Overdue";
 
+      const member = (d.members || [])[0];
       return {
         id: d._id,
         title: d.subject,
         priority: d.priority ? d.priority.charAt(0).toUpperCase() + d.priority.slice(1) : "Medium",
-        type: d.directiveType === "minister" ? "Minister Directive" : d.directiveType === "meeting" ? "Meeting Directive" : "Minister Directive",
-        assignee: d.user ? `${d.user.name} (${d.user.designation})` : "Unassigned",
-        assigneeUserId: d.user?._id,
+        type: d.type || "Minister Directive",
+        assignee: member ? `${member.name} (${member.designation})` : "Unassigned",
+        assigneeUserId: member?._id,
         owner: "Management",
         createdAt: new Date(d.createdAt).toLocaleDateString(),
         pendingDays,
@@ -105,11 +106,13 @@ export default function DirectivesPending() {
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/directives/${id}/endorse`, {
-        method: "PATCH",
+      const res = await fetch(`${API_BASE_URL}api/directive/endorse`, {
+        method: "POST",
         headers: {
+          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ threadId: id })
       });
 
       if (res.ok) {

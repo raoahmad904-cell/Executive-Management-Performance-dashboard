@@ -32,9 +32,12 @@ function MessageBubble({ message, currentUserId }) {
     hour12: true
   }) : "";
 
-  const handleDownloadFile = (filename) => {
-    if (!filename) return;
-    const url = `${API_BASE_URL}api/directives/download/${filename}`;
+  const handleDownloadFile = (att) => {
+    // Attachments are served statically from /uploads (see backend app.js),
+    // and each message attachment already carries its own relative url.
+    const relativeUrl = att?.url || (att?.filename ? `/uploads/directives/${att.filename}` : null);
+    if (!relativeUrl) return;
+    const url = `${API_BASE_URL}${relativeUrl.replace(/^\//, "")}`;
     Linking.openURL(url).catch(err => {
       console.error("Failed to open URL:", err);
       Alert.alert("Error", "Could not trigger attachment download.");
@@ -68,12 +71,11 @@ function MessageBubble({ message, currentUserId }) {
         {hasAttachments && (
           <View className={`mt-2 gap-1.5 pt-1.5 ${messageText ? (isMine ? "border-t border-white/20" : "border-t border-gray-200") : ""}`}>
             {message.attachments.map((att, idx) => {
-              const fname = att.filename || att.url;
               const displayName = att.originalName || att.filename || "Attachment";
               return (
                 <TouchableOpacity
                   key={att._id || idx}
-                  onPress={() => handleDownloadFile(fname)}
+                  onPress={() => handleDownloadFile(att)}
                   activeOpacity={0.75}
                   className={`flex-row items-center rounded-lg px-2.5 py-1.5 ${
                     isMine ? "bg-white/20" : "bg-gray-100 border border-gray-200"
@@ -169,6 +171,7 @@ export default function DirectiveView({ route, navigation }) {
     try {
       const token = await AsyncStorage.getItem("token");
       const formData = new FormData();
+      formData.append("threadId", directive.id);
       if (reply.trim()) {
         formData.append("message", reply.trim());
       }
@@ -182,7 +185,7 @@ export default function DirectiveView({ route, navigation }) {
         });
       });
 
-      const res = await fetch(`${API_BASE_URL}api/directives/${directive.id}/reply`, {
+      const res = await fetch(`${API_BASE_URL}api/directive/reply`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -191,8 +194,8 @@ export default function DirectiveView({ route, navigation }) {
       });
 
       if (res.ok) {
-        const updated = await res.json();
-        setMessages(updated.messages || []);
+        const updatedThread = await res.json();
+        setMessages(updatedThread.messages || []);
         setReply("");
         setAttachments([]);
       } else {

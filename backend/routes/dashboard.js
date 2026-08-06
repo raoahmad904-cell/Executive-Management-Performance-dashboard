@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { getDashboard, getWeeklyStats, getQuarterlyStats, getTwoYearStats, getMonthlyProgressStats, getDashboardStats, getDashboardStatDetails } = require('../controllers/dashboardController');
+const { getDashboard, getWeeklyStats, getQuarterlyStats, getTwoYearStats, getMonthlyProgressStats } = require('../controllers/dashboardController');
 
-router.get('/stats', getDashboardStats);
-router.get('/stat-details', getDashboardStatDetails);
 router.get('/', getDashboard);
 router.get('/weekly-stats', getWeeklyStats);
 router.get('/quarterly-stats', getQuarterlyStats);

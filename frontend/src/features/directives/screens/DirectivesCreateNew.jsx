@@ -5,6 +5,7 @@ import React, { useLayoutEffect, useState, useEffect } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -92,6 +93,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
         ...next.map((a) => ({
           name: a.name ?? "file",
           uri: a.uri,
+          mimeType: a.mimeType,
         })),
       ]);
     } catch (e) {
@@ -115,24 +117,46 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/directives/create`, {
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const type = directiveType === "meeting" ? "Meeting Directive" : "Minister Directive";
+
+      const formData = new FormData();
+      formData.append("subject", subject.trim());
+      formData.append("priority", priority);
+      formData.append("type", type);
+      formData.append("duration", JSON.stringify({
+        start: startDate || todayStr,
+        end: endDate || todayStr,
+      }));
+      formData.append("message", details.trim());
+      selectedUserIds.forEach((id) => formData.append("members", id));
+
+      if (type === "Meeting Directive") {
+        if (ministerRef) formData.append("meetingReference", ministerRef);
+        if (directiveDate) formData.append("meetingDate", directiveDate);
+      } else {
+        if (ministerRef) formData.append("ministerReference", ministerRef);
+        if (directiveDate) formData.append("directiveDate", directiveDate);
+      }
+
+      attachments.forEach((file) => {
+        const fileUri = file.uri.startsWith("file://") && Platform.OS !== "android"
+          ? file.uri.replace("file://", "")
+          : file.uri;
+        formData.append("attachments", {
+          uri: fileUri,
+          name: file.name || "attachment",
+          type: file.mimeType || "application/octet-stream",
+        });
+      });
+
+      const res = await fetch(`${API_BASE_URL}api/directive/create`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          subject: subject.trim(),
-          startDate: startDate || new Date().toISOString().split('T')[0],
-          endDate: endDate || new Date().toISOString().split('T')[0],
-          userIds: selectedUserIds,
-          priority,
-          directiveType,
-          ministerRef,
-          directiveDate,
-          durationDays,
-          details: details.trim()
-        })
+        body: formData
       });
 
       if (res.ok) {
