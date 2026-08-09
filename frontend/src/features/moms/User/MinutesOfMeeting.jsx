@@ -9,13 +9,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Linking,
   ActivityIndicator,
   Modal
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
 import AttachMinutesForm from "./AttachMinutesForm";
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 const ACCENT        = "#0D4429";
 const ITEMS_PER_PAGE = 5;
@@ -73,7 +74,7 @@ export default function MinutesOfMeeting() {
       const role = userObj.role?.toLowerCase() || '';
       const isMgmt = role === 'management' || role === 'admin' || role === 'jmanagement';
 
-      const endpoint = isMgmt ? 'api/moms/all' : 'api/moms';
+      const endpoint = isMgmt ? 'api/mom/all' : 'api/mom';
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -118,7 +119,7 @@ export default function MinutesOfMeeting() {
         });
       }
 
-      const res = await fetch(`${API_BASE_URL}api/moms/attach`, {
+      const res = await fetch(`${API_BASE_URL}api/mom/attach`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -182,23 +183,40 @@ export default function MinutesOfMeeting() {
     setViewTargetItem(item);
   }
 
-  function handleDownload(item) {
+  async function handleDownload(item) {
     if (!item.attachment) {
       Alert.alert("Notice", "No file attachment found for this record.");
       return;
     }
-    const url = `${API_BASE_URL}api/moms/download/${item.attachment}`;
-    Linking.openURL(url).catch(err => {
-      console.error("Failed to open URL:", err);
-      Alert.alert("Error", "Could not trigger download.");
-    });
+    try {
+      // The download route requires auth, and Linking.openURL can't attach a
+      // Bearer token - download it locally (with the header) then share/open it.
+      const token = await AsyncStorage.getItem("token");
+      const url = `${API_BASE_URL}api/mom/download/${item.attachment}`;
+      const localUri = FileSystem.cacheDirectory + item.attachment;
+      const { uri, status } = await FileSystem.downloadAsync(url, localUri, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (status !== 200) {
+        Alert.alert("Error", "Could not download the attachment.");
+        return;
+      }
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        Alert.alert("Downloaded", `File saved to ${uri}`);
+      }
+    } catch (err) {
+      console.error("Failed to download attachment:", err);
+      Alert.alert("Error", "Could not download the attachment.");
+    }
   }
 
   async function performDelete(id) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/moms/${id}`, {
+      const res = await fetch(`${API_BASE_URL}api/mom/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

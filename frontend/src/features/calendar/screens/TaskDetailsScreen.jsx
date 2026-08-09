@@ -37,7 +37,7 @@ export default function TaskDetailsScreen({ task, onClose, onComplete }) {
   }, [nav]);
 
   if (!task) return null;
-  const isPending = task.status === 'Pending';
+  const isPending = task.status !== 'Completed';
 
   return (
     <View className="mx-2 mb-2 mt-1 flex-1 rounded-2xl bg-[#0D4429] p-4">

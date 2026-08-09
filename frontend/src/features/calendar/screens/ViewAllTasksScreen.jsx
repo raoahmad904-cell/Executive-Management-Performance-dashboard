@@ -78,7 +78,7 @@ function parseDate(str) {
 const CATEGORY_OPTIONS = [
   { label: '--All Categories--', value: '' },
   { label: 'Minister Directive', value: 'Minister directive' },
-  { label: 'Meeting Directive', value: 'Meeting directive' },
+  { label: 'Meeting Directive', value: 'Meeting Directives' },
   { label: 'Routine', value: 'Routine' },
 ];
 

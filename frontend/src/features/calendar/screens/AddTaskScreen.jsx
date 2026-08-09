@@ -15,15 +15,16 @@ import DateFilterField from "../../../utils/DateFilterField";
 import { fmtDate } from "../../../utils/utils";
 
 // ─── Option Lists ─────────────────────────────────────────────────────────────
+// Values must match the CalendarTask model's enums exactly (backend/models/CalendarTask.js)
 const CATEGORY_OPTIONS = [
   { label: "Minister Directive", value: "Minister directive" },
-  { label: "Meeting Directive", value: "Meeting directive" },
+  { label: "Meeting Directive", value: "Meeting Directives" },
   { label: "Routine", value: "Routine" },
 ];
 const PRIORITY_OPTIONS = [
-  { label: "Low", value: "Low" },
-  { label: "Medium", value: "Medium" },
-  { label: "High", value: "High" },
+  { label: "Low", value: "low" },
+  { label: "Medium", value: "medium" },
+  { label: "High", value: "high" },
 ];
 const ASSIGNED_BY_OPTIONS = [
   { label: "Self", value: "Self" },

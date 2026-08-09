@@ -8,7 +8,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Linking,
   ActivityIndicator,
   Modal
 } from "react-native";
@@ -18,6 +17,8 @@ import { EMBLEM_BASE64 } from "../../../utils/logoBase64.js";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import DateFilterField from "../../../utils/DateFilterField";
 import * as Print from 'expo-print';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 const SECTION_OPTIONS = [
   { label: "All Sections", value: "" },
@@ -123,7 +124,7 @@ export default function MinutesRepository() {
       setLoading(true);
       try {
         const token = await AsyncStorage.getItem("token");
-        const res = await fetch(`${API_BASE_URL}api/moms/all`, {
+        const res = await fetch(`${API_BASE_URL}api/mom/all`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -229,16 +230,33 @@ export default function MinutesRepository() {
     setViewTargetItem(item);
   }
 
-  function handleDownload(item) {
+  async function handleDownload(item) {
     if (!item.attachment) {
       Alert.alert("Notice", "No file attachment found for this record.");
       return;
     }
-    const url = `${API_BASE_URL}api/moms/download/${item.attachment}`;
-    Linking.openURL(url).catch(err => {
-      console.error("Failed to open URL:", err);
-      Alert.alert("Error", "Could not trigger download.");
-    });
+    try {
+      // The download route requires auth, and Linking.openURL can't attach a
+      // Bearer token - download it locally (with the header) then share/open it.
+      const token = await AsyncStorage.getItem("token");
+      const url = `${API_BASE_URL}api/mom/download/${item.attachment}`;
+      const localUri = FileSystem.cacheDirectory + item.attachment;
+      const { uri, status } = await FileSystem.downloadAsync(url, localUri, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (status !== 200) {
+        Alert.alert("Error", "Could not download the attachment.");
+        return;
+      }
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        Alert.alert("Downloaded", `File saved to ${uri}`);
+      }
+    } catch (err) {
+      console.error("Failed to download attachment:", err);
+      Alert.alert("Error", "Could not download the attachment.");
+    }
   }
 
   async function handlePrint() {
@@ -462,20 +480,24 @@ export default function MinutesRepository() {
 
         {/* From / To date */}
         <View className="flex-row mb-4" style={{ gap: 10 }}>
-          <DateFilterField
-            label="From"
-            value={fromDate}
-            onSelect={setFromDate}
-            labelClassName={labelCls}
-            triggerClassName={triggerCls}
-          />
-          <DateFilterField
-            label="To"
-            value={toDate}
-            onSelect={setToDate}
-            labelClassName={labelCls}
-            triggerClassName={triggerCls}
-          />
+          <View className="flex-1">
+            <DateFilterField
+              label="From"
+              value={fromDate}
+              onSelect={setFromDate}
+              labelClassName={labelCls}
+              triggerClassName={triggerCls}
+            />
+          </View>
+          <View className="flex-1">
+            <DateFilterField
+              label="To"
+              value={toDate}
+              onSelect={setToDate}
+              labelClassName={labelCls}
+              triggerClassName={triggerCls}
+            />
+          </View>
         </View>
 
         {/* Search + Clear */}

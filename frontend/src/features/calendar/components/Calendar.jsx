@@ -42,6 +42,39 @@ function makeTimestamp() {
   return new Date().toISOString();
 }
 
+function capitalize(s) {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Backend's CalendarTask has no status string, just `completed` + `expectedEndDate` -
+// derive the same Completed/Overdue/In Process status the UI already expects.
+function computeStatus(t) {
+  if (t.completed) return 'Completed';
+  if (t.expectedEndDate) {
+    const end = new Date(t.expectedEndDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    if (end < today) return 'Overdue';
+  }
+  return 'In Process';
+}
+
+// Translate a raw CalendarTask document into the shape TaskListScreen /
+// ViewAllTasksScreen / TaskDetailsScreen already expect (title/status/dateKey/endDate).
+function normalizeTask(t) {
+  return {
+    ...t,
+    id: t._id,
+    title: t.name,
+    dateKey: t.date,
+    endDate: t.expectedEndDate,
+    priority: capitalize(t.priority),
+    status: computeStatus(t),
+  };
+}
+
 export default function CalendarComponent({ resetViewTrigger }) {
   const nav = useNavigation();
   useLayoutEffect(() => {
@@ -72,18 +105,18 @@ export default function CalendarComponent({ resetViewTrigger }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/tasks`, {
+      const res = await fetch(`${API_BASE_URL}api/calendar/tasks/all-non-management`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        // Group tasks by dateKey
+        // Group tasks by date
         const grouped = {};
         data.forEach(t => {
-          const key = t.dateKey || todayKey;
+          const normalized = normalizeTask(t);
+          const key = normalized.dateKey || todayKey;
           if (!grouped[key]) grouped[key] = [];
-          // Map MongoDB _id to frontend id
-          grouped[key].push({ ...t, id: t._id });
+          grouped[key].push(normalized);
         });
         setTasks(grouped);
       } else {
@@ -157,30 +190,33 @@ export default function CalendarComponent({ resetViewTrigger }) {
     if (!selectedKey) return;
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/tasks`, {
+      const res = await fetch(`${API_BASE_URL}api/calendar/tasks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          title: formData.title.trim(),
+          name: formData.title.trim(),
           category: formData.category,
           startDate: formData.startDate,
-          endDate: formData.endDate,
+          expectedEndDate: formData.endDate,
           priority: formData.priority,
-          assignedBy: formData.assignedBy,
+          // Not sent: "assignedBy" here is a free-text label ("Self", "Minister", ...)
+          // but the backend field is a User ObjectId reference - sending the label
+          // would fail Mongoose's ObjectId cast, so it's kept UI-only for now.
           description: formData.description.trim(),
           remarks: formData.remarks.trim(),
-          dateKey: selectedKey
+          date: selectedKey
         })
       });
 
       if (res.ok) {
         const newTask = await res.json();
+        const normalized = normalizeTask(newTask);
         setTasks(prev => ({
           ...prev,
-          [selectedKey]: [...(prev[selectedKey] || []), { ...newTask, id: newTask._id }],
+          [selectedKey]: [...(prev[selectedKey] || []), normalized],
         }));
         setShowAddTask(false);
         setShowTaskList(true);
@@ -211,31 +247,27 @@ export default function CalendarComponent({ resetViewTrigger }) {
     const currentTask = taskList.find(t => t.id === taskId);
     if (!currentTask) return;
 
-    const ts = makeTimestamp();
-    const targetStatus = currentTask.status === 'Completed' ? 'In Process' : 'Completed';
-    const targetCompletedAt = currentTask.status === 'Completed' ? null : ts;
+    const targetCompleted = currentTask.status !== 'Completed';
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/tasks/${taskId}`, {
+      const res = await fetch(`${API_BASE_URL}api/calendar/tasks/${taskId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          status: targetStatus,
-          completedAt: targetCompletedAt
+          completed: targetCompleted
         })
       });
 
       if (res.ok) {
+        const updated = await res.json();
+        const normalized = normalizeTask(updated);
         setTasks(prev => ({
           ...prev,
-          [key]: (prev[key] || []).map(t => {
-            if (t.id !== taskId) return t;
-            return { ...t, status: targetStatus, completedAt: targetCompletedAt };
-          }),
+          [key]: (prev[key] || []).map(t => (t.id !== taskId ? t : normalized)),
         }));
       } else {
         const errJson = await res.json().catch(() => ({}));
@@ -252,7 +284,7 @@ export default function CalendarComponent({ resetViewTrigger }) {
     if (!dateKey) return;
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE_URL}api/tasks/${taskId}`, {
+      const res = await fetch(`${API_BASE_URL}api/calendar/tasks/${taskId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
