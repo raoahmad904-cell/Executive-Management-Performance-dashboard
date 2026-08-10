@@ -5,6 +5,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
 import DirectiveCard from "../components/DirectiveCard";
 
+function formatDateTime(d) {
+  if (!d) return "";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export default function UserDirectives() {
   const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState("existing"); // "existing" or "closed"
@@ -53,17 +67,18 @@ export default function UserDirectives() {
       const remainingDays = Math.ceil(diffRemaining / (1000 * 60 * 60 * 24));
       const remaining = remainingDays > 0 ? `${remainingDays} days left` : "Overdue";
 
-      const member = (d.members || [])[0];
+      const minister = d.minister;
       return {
         id: d._id,
         title: d.subject,
         priority: d.priority ? d.priority.charAt(0).toUpperCase() + d.priority.slice(1) : "Medium",
         type: d.type || "Minister Directive",
-        assignee: member ? `${member.name} (${member.designation})` : "Unassigned",
-        assigneeUserId: member?._id,
-        owner: "Management",
-        createdAt: new Date(d.createdAt).toLocaleDateString(),
-        closedAt: d.closedAt ? new Date(d.closedAt).toLocaleDateString() : new Date().toLocaleDateString(),
+        // No assignee chip here - the viewer IS the recipient, so it's redundant
+        // (unlike the Management Pending/Closed screens, which show who a
+        // directive is for).
+        owner: minister?.designation || "Management",
+        createdAt: `${minister?.name || ""} (${formatDateTime(d.createdAt)})`,
+        closedAt: formatDateTime(d.closedAt),
         pendingDays,
         remaining,
         messages: d.messages || []

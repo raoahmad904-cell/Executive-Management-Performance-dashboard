@@ -140,16 +140,16 @@ export default function CalendarComponent({ resetViewTrigger }) {
           const userObj = JSON.parse(uStr);
           setCurrentUser(userObj);
 
-          const roleLower = userObj.role ? userObj.role.toLowerCase() : '';
-          if (roleLower === 'management' || roleLower === 'admin' || roleLower === 'jmanagement') {
-            const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_BASE_URL}api/auth/users`, {
-              headers: { "Authorization": `Bearer ${token}` }
-            });
-            if (res.ok) {
-              const data = await res.json();
-              setUsersList(data);
-            }
+          // Fetched for every role, not just Management: ViewAllTasksScreen uses
+          // this to resolve a task's "assignedBy" (a raw User id) to a display
+          // name, which any role's own tasks can need, not just Management's.
+          const token = await AsyncStorage.getItem("token");
+          const res = await fetch(`${API_BASE_URL}api/auth/users`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setUsersList(data);
           }
         }
       } catch (err) {
@@ -158,6 +158,42 @@ export default function CalendarComponent({ resetViewTrigger }) {
     };
     initData();
   }, []);
+
+  // /all-non-management excludes Admin/Minister-designation users entirely, so a
+  // logged-in user with either of those designations would never see their own
+  // tasks from fetchTasks() above. /tasks?month= has no such exclusion (it's
+  // simply scoped to the logged-in user), so merge it in for whichever month is
+  // currently displayed to guarantee the current user's own tasks are complete
+  // regardless of their designation.
+  useEffect(() => {
+    const fetchOwnMonthTasks = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const monthStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
+        const res = await fetch(`${API_BASE_URL}api/calendar/tasks?month=${monthStr}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTasks(prev => {
+            const next = { ...prev };
+            data.forEach(t => {
+              const normalized = normalizeTask(t);
+              const key = normalized.dateKey || todayKey;
+              const existing = next[key] || [];
+              if (!existing.some(x => x.id === normalized.id)) {
+                next[key] = [...existing, normalized];
+              }
+            });
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching own month tasks:", err);
+      }
+    };
+    fetchOwnMonthTasks();
+  }, [calMonth, calYear]);
 
   const isFirstRender = useRef(true);
   useEffect(() => {

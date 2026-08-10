@@ -130,6 +130,20 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
     return opts;
   }, [usersList, currentUser]);
 
+  // "assignedBy" on older tasks is a raw User ObjectId (the backend doesn't
+  // populate it on the list endpoints) - resolve it to a display name here.
+  const nameById = useMemo(() => {
+    const map = {};
+    usersList.forEach(u => { map[u._id || u.id] = u.name; });
+    if (currentUser) map[currentUser._id || currentUser.id] = currentUser.name;
+    return map;
+  }, [usersList, currentUser]);
+
+  function resolveAssignedBy(assignedBy) {
+    if (!assignedBy) return 'Self';
+    return nameById[assignedBy] || assignedBy;
+  }
+
   function applySearch() {
     setPage(0);
   }
@@ -372,8 +386,12 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
 
           {/* Date range */}
           <View className="flex-row mb-2" style={{ gap: 12 }}>
-            <DateFilterField label="From Date" value={fromDate} onSelect={setFromDate} labelClassName={labelCls} triggerClassName={triggerCls} />
-            <DateFilterField label="To Date" value={toDate} onSelect={setToDate} labelClassName={labelCls} triggerClassName={triggerCls} />
+            <View className="flex-1">
+              <DateFilterField label="From Date" value={fromDate} onSelect={setFromDate} labelClassName={labelCls} triggerClassName={triggerCls} />
+            </View>
+            <View className="flex-1">
+              <DateFilterField label="To Date" value={toDate} onSelect={setToDate} labelClassName={labelCls} triggerClassName={triggerCls} />
+            </View>
           </View>
 
           {/* Action buttons */}
@@ -466,7 +484,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
                       </View>
 
                       {/* Row 4 — assigned by */}
-                      <Text className="text-gray-400 text-xs mb-1">By: {task.assignedBy}</Text>
+                      <Text className="text-gray-400 text-xs mb-1">By: {resolveAssignedBy(task.assignedBy)}</Text>
                       {isManagement && task.user && (
                         <Text className="text-[#0D4429] font-semibold text-xs mb-1">
                           User: {task.user.name} ({task.user.designation})
