@@ -4,7 +4,6 @@ import React, { useCallback, useLayoutEffect, useMemo, useRef, useState, useEffe
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../../utils/utils.js";
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import StatusModal from "../../../../components/common/StatusModal";
 import {
   Gesture,
   GestureDetector,
@@ -72,6 +72,7 @@ function TwoYearPlanEditorBody() {
   const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
   const [showSubmitSuccessModal, setShowSubmitSuccessModal] = useState(false);
+  const [status, setStatus] = useState(null); // { title, message }
 
   const richText = useRef(null);
 
@@ -152,7 +153,7 @@ function TwoYearPlanEditorBody() {
 
   async function handleSave() {
     if (isSubmitted) {
-      Alert.alert("Locked", "This plan has already been submitted and cannot be modified.");
+      setStatus({ title: "Locked", message: "This plan has already been submitted and cannot be modified." });
       return;
     }
     try {
@@ -185,17 +186,17 @@ function TwoYearPlanEditorBody() {
         setShowSaveSuccessModal(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error", errJson.error || "Failed to save plan.");
+        setStatus({ title: "Error", message: errJson.error || "Failed to save plan." });
       }
     } catch (error) {
       console.error("Error saving plan:", error);
-      Alert.alert("Network Error", "Could not connect to the server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the server." });
     }
   }
 
   function handleSubmit() {
     if (isSubmitted) {
-      Alert.alert("Locked", "This plan has already been submitted.");
+      setStatus({ title: "Locked", message: "This plan has already been submitted." });
       return;
     }
     setShowConfirmSubmitModal(true);
@@ -232,11 +233,11 @@ function TwoYearPlanEditorBody() {
         setShowSubmitSuccessModal(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error", errJson.error || "Failed to submit plan.");
+        setStatus({ title: "Error", message: errJson.error || "Failed to submit plan." });
       }
     } catch (error) {
       console.error("Error submitting plan:", error);
-      Alert.alert("Network Error", "Could not connect to the server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the server." });
     }
   }
 
@@ -746,6 +747,14 @@ function TwoYearPlanEditorBody() {
           </View>
         </View>
       </Modal>
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

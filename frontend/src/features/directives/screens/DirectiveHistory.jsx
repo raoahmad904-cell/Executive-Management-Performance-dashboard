@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useRef, useState, useEffect } from "react";
-import { Alert, FlatList, Linking, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Linking, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
+import StatusModal from "../../../components/common/StatusModal";
 
 const ACCENT = "#0D4429";
 
-function MessageBubble({ message, currentUserId }) {
+function MessageBubble({ message, currentUserId, onError }) {
   const senderObj = message.sender || {};
   const senderId = typeof senderObj === "object" ? senderObj._id || senderObj.id : senderObj;
   const isMine = senderId === currentUserId;
@@ -21,12 +22,15 @@ function MessageBubble({ message, currentUserId }) {
     hour12: true
   }) : "";
 
-  const handleDownloadFile = (filename) => {
-    if (!filename) return;
-    const url = `${API_BASE_URL}api/directives/download/${filename}`;
+  const handleDownloadFile = (att) => {
+    // Attachments are served statically from /uploads (see backend app.js),
+    // and each message attachment already carries its own relative url.
+    const relativeUrl = att?.url || (att?.filename ? `/uploads/directives/${att.filename}` : null);
+    if (!relativeUrl) return;
+    const url = `${API_BASE_URL}${relativeUrl.replace(/^\//, "")}`;
     Linking.openURL(url).catch(err => {
       console.error("Failed to open URL:", err);
-      Alert.alert("Error", "Could not trigger attachment download.");
+      onError?.("Error", "Could not trigger attachment download.");
     });
   };
 
@@ -57,12 +61,11 @@ function MessageBubble({ message, currentUserId }) {
         {hasAttachments && (
           <View className={`mt-2 gap-1.5 pt-1.5 ${messageText ? (isMine ? "border-t border-white/20" : "border-t border-gray-200") : ""}`}>
             {message.attachments.map((att, idx) => {
-              const fname = att.filename || att.url;
               const displayName = att.originalName || att.filename || "Attachment";
               return (
                 <TouchableOpacity
                   key={att._id || idx}
-                  onPress={() => handleDownloadFile(fname)}
+                  onPress={() => handleDownloadFile(att)}
                   activeOpacity={0.75}
                   className={`flex-row items-center rounded-lg px-2.5 py-1.5 ${
                     isMine ? "bg-white/20" : "bg-gray-100 border border-gray-200"
@@ -101,6 +104,7 @@ export default function DirectiveHistory({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const listRef = useRef(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [status, setStatus] = useState(null); // { title, message }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -155,7 +159,7 @@ export default function DirectiveHistory({ route, navigation }) {
           onContentSizeChange={() =>
             listRef.current?.scrollToEnd({ animated: true })
           }
-          renderItem={({ item }) => <MessageBubble message={item} currentUserId={currentUserId} />}
+          renderItem={({ item }) => <MessageBubble message={item} currentUserId={currentUserId} onError={(title, message) => setStatus({ title, message })} />}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center py-10">
               <Text className="text-sm text-white/70">
@@ -165,6 +169,14 @@ export default function DirectiveHistory({ route, navigation }) {
           }
         />
       </View>
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

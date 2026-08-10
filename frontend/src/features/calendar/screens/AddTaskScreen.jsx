@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,6 +12,7 @@ import CustomDropdown from "../../../components/forms/CustomDropdown";
 import CustomDropdownLabel from "../../../components/forms/CustomDropdownLabel";
 import DateFilterField from "../../../utils/DateFilterField";
 import { fmtDate } from "../../../utils/utils";
+import StatusModal from "../../../components/common/StatusModal";
 
 // ─── Option Lists ─────────────────────────────────────────────────────────────
 // Values must match the CalendarTask model's enums exactly (backend/models/CalendarTask.js)
@@ -62,6 +62,7 @@ export default function AddTaskScreen({
   const [assignedBy, setAssignedBy] = useState("");
   const [description, setDescription] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [showRequiredModal, setShowRequiredModal] = useState(false);
 
   const labelCls = "mb-1.5 text-sm font-semibold text-white/95";
   const triggerCls = "rounded-xl border-0 bg-white px-3.5 h-12 flex-row items-center justify-between";
@@ -79,10 +80,7 @@ export default function AddTaskScreen({
 
   function handleSubmit() {
     if (!taskTitle.trim() || !category || !priority || !assignedBy) {
-      Alert.alert(
-        "Required Fields",
-        "Please fill in all required fields marked with *"
-      );
+      setShowRequiredModal(true);
       return;
     }
     onSubmit({
@@ -255,6 +253,14 @@ export default function AddTaskScreen({
           </View>
         </ScrollView>
       </View>
+
+      <StatusModal
+        visible={showRequiredModal}
+        type="error"
+        title="Required Fields"
+        message="Please fill in all required fields marked with *"
+        onClose={() => setShowRequiredModal(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

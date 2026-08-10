@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useState } from "react";
 import {
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import DateFilterField from "../../../utils/DateFilterField";
+import StatusModal from "../../../components/common/StatusModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ACCENT = "#0D4429";
@@ -83,6 +83,7 @@ export default function AttachMinutesForm({ onSubmit, onClose }) {
   const [section,    setSection]    = useState("");
   const [fileName,   setFileName]   = useState("");
   const [fileAsset,  setFileAsset]  = useState(null);
+  const [status, setStatus] = useState(null); // { title, message }
 
   function reset() {
     setSubject("");
@@ -105,16 +106,16 @@ export default function AttachMinutesForm({ onSubmit, onClose }) {
       setFileAsset(asset);
       setFileName(asset.name);
     } catch {
-      Alert.alert("Error", "Could not open the document picker.");
+      setStatus({ title: "Error", message: "Could not open the document picker." });
     }
   }
 
   function handleSubmit() {
     if (!subject.trim() || !fileNumber.trim() || !section || !fileAsset) {
-      Alert.alert(
-        "Required Fields",
-        "Please fill in Subject, File Number, Concerned Section, and choose a file."
-      );
+      setStatus({
+        title: "Required Fields",
+        message: "Please fill in Subject, File Number, Concerned Section, and choose a file.",
+      });
       return;
     }
 
@@ -290,6 +291,14 @@ export default function AttachMinutesForm({ onSubmit, onClose }) {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

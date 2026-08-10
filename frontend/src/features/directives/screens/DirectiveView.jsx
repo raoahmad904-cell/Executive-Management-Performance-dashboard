@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Linking,
@@ -15,10 +14,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
+import StatusModal from "../../../components/common/StatusModal";
 
 const ACCENT = "#0D4429";
 
-function MessageBubble({ message, currentUserId }) {
+function MessageBubble({ message, currentUserId, onError }) {
   const senderObj = message.sender || {};
   const senderId = typeof senderObj === "object" ? senderObj._id || senderObj.id : senderObj;
   const isMine = senderId === currentUserId;
@@ -40,7 +40,7 @@ function MessageBubble({ message, currentUserId }) {
     const url = `${API_BASE_URL}${relativeUrl.replace(/^\//, "")}`;
     Linking.openURL(url).catch(err => {
       console.error("Failed to open URL:", err);
-      Alert.alert("Error", "Could not trigger attachment download.");
+      onError?.("Error", "Could not trigger attachment download.");
     });
   };
 
@@ -121,6 +121,11 @@ export default function DirectiveView({ route, navigation }) {
   const [reply, setReply] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [status, setStatus] = useState(null); // { title, message }
+
+  function showError(title, message) {
+    setStatus({ title, message });
+  }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -157,7 +162,7 @@ export default function DirectiveView({ route, navigation }) {
 
       setAttachments((prev) => [...prev, ...picked]);
     } catch {
-      Alert.alert("Attachments", "Could not open file picker.");
+      showError("Attachments", "Could not open file picker.");
     }
   }
 
@@ -200,11 +205,11 @@ export default function DirectiveView({ route, navigation }) {
         setAttachments([]);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error", errJson.error || "Failed to send message.");
+        showError("Error", errJson.error || "Failed to send message.");
       }
     } catch (error) {
       console.error("Error replying to directive:", error);
-      Alert.alert("Error", "Could not send message to the server.");
+      showError("Error", "Could not send message to the server.");
     }
   }
 
@@ -249,7 +254,7 @@ export default function DirectiveView({ route, navigation }) {
             onContentSizeChange={() =>
               listRef.current?.scrollToEnd({ animated: true })
             }
-            renderItem={({ item }) => <MessageBubble message={item} currentUserId={currentUserId} />}
+            renderItem={({ item }) => <MessageBubble message={item} currentUserId={currentUserId} onError={showError} />}
             ListEmptyComponent={
               <View className="flex-1 items-center justify-center py-10">
                 <Text className="text-sm text-white/70">
@@ -318,6 +323,14 @@ export default function DirectiveView({ route, navigation }) {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

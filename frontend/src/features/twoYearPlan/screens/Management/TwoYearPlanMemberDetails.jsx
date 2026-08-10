@@ -7,7 +7,6 @@ import { EMBLEM_BASE64 } from "../../../../utils/logoBase64.js";
 import { ActivityIndicator } from "react-native";
 import * as Print from 'expo-print';
 import {
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -17,6 +16,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import StatusModal from "../../../../components/common/StatusModal";
 import {
   Gesture,
   GestureDetector,
@@ -140,6 +140,7 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
   const [activity, setActivity] = useState(null);
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null); // { title, message }
 
   useEffect(() => {
     const fetchMemberPlan = async () => {
@@ -369,7 +370,7 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
         return;
       }
       console.error("Print Error:", error);
-      Alert.alert("Print Failed", "An error occurred while preparing the PDF for printing.");
+      setStatus({ title: "Print Failed", message: "An error occurred while preparing the PDF for printing." });
     }
   }
 
@@ -613,6 +614,14 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
           </GestureHandlerRootView>
         </View>
       ) : null}
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

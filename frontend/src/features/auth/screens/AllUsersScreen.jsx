@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL, getPaginationRange } from "../../../utils/utils.js";
+import StatusModal from "../../../components/common/StatusModal";
 
 const PAGE_SIZE = 5;
 
@@ -11,6 +12,7 @@ export default function AllUsersScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState(null);
+  const [status, setStatus] = useState(null); // { title, message }
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -23,11 +25,11 @@ export default function AllUsersScreen({ navigation }) {
         const data = await res.json();
         setUsers(Array.isArray(data) ? data : []);
       } else {
-        Alert.alert("Error", "Could not load users.");
+        setStatus({ title: "Error", message: "Could not load users." });
       }
     } catch (err) {
       console.error("Error fetching users:", err);
-      Alert.alert("Network Error", "Could not connect to the backend server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the backend server." });
     } finally {
       setLoading(false);
     }
@@ -50,11 +52,11 @@ export default function AllUsersScreen({ navigation }) {
         setUsers(prev => prev.map(u => u._id === user._id ? { ...u, disabled: !user.disabled } : u));
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error", errJson.error || "Could not update user.");
+        setStatus({ title: "Error", message: errJson.error || "Could not update user." });
       }
     } catch (err) {
       console.error("Error toggling user:", err);
-      Alert.alert("Network Error", "Could not connect to the backend server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the backend server." });
     } finally {
       setBusyId(null);
     }
@@ -237,6 +239,14 @@ export default function AllUsersScreen({ navigation }) {
           )}
         </ScrollView>
       )}
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

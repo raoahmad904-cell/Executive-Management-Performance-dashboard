@@ -1,9 +1,10 @@
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import React, { useLayoutEffect, useState, useCallback } from "react";
-import { Alert, FlatList, Text, View, ActivityIndicator, TouchableOpacity } from "react-native";
+import { FlatList, Text, View, ActivityIndicator, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
 import DirectiveCard from "../components/DirectiveCard";
+import StatusModal from "../../../components/common/StatusModal";
 
 function formatDateTime(d) {
   if (!d) return "";
@@ -24,6 +25,7 @@ export default function UserDirectives() {
   const [activeTab, setActiveTab] = useState("existing"); // "existing" or "closed"
   const [directives, setDirectives] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null); // { title, message }
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: "My Directives" });
@@ -43,7 +45,7 @@ export default function UserDirectives() {
       }
     } catch (error) {
       console.error("Error loading user directives:", error);
-      Alert.alert("Error", "Could not connect to the server.");
+      setStatus({ title: "Error", message: "Could not connect to the server." });
     } finally {
       setLoading(false);
     }
@@ -149,6 +151,14 @@ export default function UserDirectives() {
           }
         />
       )}
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

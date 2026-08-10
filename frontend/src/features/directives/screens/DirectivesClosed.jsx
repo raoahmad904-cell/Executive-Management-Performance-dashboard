@@ -1,11 +1,12 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useLayoutEffect, useMemo, useState, useEffect } from "react";
-import { FlatList, Text, View, ActivityIndicator, Alert } from "react-native";
+import { FlatList, Text, View, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import CustomDropdownLabel from "../../../components/forms/CustomDropdownLabel";
 import DirectiveCard from "../components/DirectiveCard";
+import StatusModal from "../../../components/common/StatusModal";
 
 export default function DirectivesClosed({ showUserFilter = true }) {
   const navigation = useNavigation();
@@ -17,6 +18,7 @@ export default function DirectivesClosed({ showUserFilter = true }) {
   const [directives, setDirectives] = useState([]);
   const [userOptions, setUserOptions] = useState([{ label: "All", value: "all" }]);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null); // { title, message }
 
   const fetchClosedData = async () => {
     setLoading(true);
@@ -45,7 +47,7 @@ export default function DirectivesClosed({ showUserFilter = true }) {
       }
     } catch (error) {
       console.error("Error loading closed directives:", error);
-      Alert.alert("Error", "Could not connect to the backend server.");
+      setStatus({ title: "Error", message: "Could not connect to the backend server." });
     } finally {
       setLoading(false);
     }
@@ -119,6 +121,14 @@ export default function DirectivesClosed({ showUserFilter = true }) {
           }
         />
       )}
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

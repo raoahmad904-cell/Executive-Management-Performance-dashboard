@@ -3,7 +3,6 @@ import { useNavigation } from "@react-navigation/native";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useLayoutEffect, useMemo, useState, useEffect } from "react";
 import {
-  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -17,6 +16,7 @@ import { API_BASE_URL } from "../../../utils/utils.js";
 import AttachMinutesForm from "./AttachMinutesForm";
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import StatusModal from "../../../components/common/StatusModal";
 
 const ACCENT        = "#0D4429";
 const ITEMS_PER_PAGE = 5;
@@ -50,6 +50,7 @@ export default function MinutesOfMeeting() {
   const [viewTargetItem, setViewTargetItem] = useState(null);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
   const [showAttachSuccessModal, setShowAttachSuccessModal] = useState(false);
+  const [alertInfo, setAlertInfo] = useState(null); // { type, title, message }
 
   useEffect(() => {
     const init = async () => {
@@ -136,11 +137,11 @@ export default function MinutesOfMeeting() {
         setShowAttachSuccessModal(true);
       } else {
         const errData = await res.json();
-        Alert.alert("Error", errData.message || "Failed to attach Minutes of Meeting.");
+        setAlertInfo({ type: "error", title: "Error", message: errData.message || "Failed to attach Minutes of Meeting." });
       }
     } catch (err) {
       console.error("Error attaching MoM:", err);
-      Alert.alert("Error", "Network error. Failed to connect to server.");
+      setAlertInfo({ type: "error", title: "Error", message: "Network error. Failed to connect to server." });
     } finally {
       setLoading(false);
     }
@@ -185,7 +186,7 @@ export default function MinutesOfMeeting() {
 
   async function handleDownload(item) {
     if (!item.attachment) {
-      Alert.alert("Notice", "No file attachment found for this record.");
+      setAlertInfo({ type: "warning", title: "Notice", message: "No file attachment found for this record." });
       return;
     }
     try {
@@ -194,21 +195,21 @@ export default function MinutesOfMeeting() {
       const token = await AsyncStorage.getItem("token");
       const url = `${API_BASE_URL}api/mom/download/${item.attachment}`;
       const localUri = FileSystem.cacheDirectory + item.attachment;
-      const { uri, status } = await FileSystem.downloadAsync(url, localUri, {
+      const { uri, status: downloadStatus } = await FileSystem.downloadAsync(url, localUri, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (status !== 200) {
-        Alert.alert("Error", "Could not download the attachment.");
+      if (downloadStatus !== 200) {
+        setAlertInfo({ type: "error", title: "Error", message: "Could not download the attachment." });
         return;
       }
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri);
       } else {
-        Alert.alert("Downloaded", `File saved to ${uri}`);
+        setAlertInfo({ type: "success", title: "Downloaded", message: `File saved to ${uri}` });
       }
     } catch (err) {
       console.error("Failed to download attachment:", err);
-      Alert.alert("Error", "Could not download the attachment.");
+      setAlertInfo({ type: "error", title: "Error", message: "Could not download the attachment." });
     }
   }
 
@@ -228,10 +229,10 @@ export default function MinutesOfMeeting() {
         setShowDeleteSuccessModal(true);
       } else {
         const errData = await res.json();
-        Alert.alert("Error", errData.message || "Failed to delete record.");
+        setAlertInfo({ type: "error", title: "Error", message: errData.message || "Failed to delete record." });
       }
     } catch (err) {
-      Alert.alert("Error", "Network error. Failed to delete record.");
+      setAlertInfo({ type: "error", title: "Error", message: "Network error. Failed to delete record." });
     } finally {
       setLoading(false);
     }
@@ -733,6 +734,14 @@ export default function MinutesOfMeeting() {
           </View>
         </View>
       </Modal>
+
+      <StatusModal
+        visible={alertInfo !== null}
+        type={alertInfo?.type}
+        title={alertInfo?.title}
+        message={alertInfo?.message}
+        onClose={() => setAlertInfo(null)}
+      />
     </View>
   );
 }

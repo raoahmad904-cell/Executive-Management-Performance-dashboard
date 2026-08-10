@@ -1,12 +1,13 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
 import AddTaskScreen from '../screens/AddTaskScreen';
 import TaskDetailsScreen from '../screens/TaskDetailsScreen';
 import TaskListScreen from '../screens/TaskListScreen';
 import ViewAllTasksScreen from '../screens/ViewAllTasksScreen';
+import StatusModal from '../../../components/common/StatusModal';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_NAMES = [
@@ -99,6 +100,7 @@ export default function CalendarComponent({ resetViewTrigger }) {
 
   const [viewTask, setViewTask] = useState(null);
   const [detailsReturn, setDetailsReturn] = useState('list');
+  const [status, setStatus] = useState(null); // { title, message }
 
   // Load tasks from backend on mount
   const fetchTasks = async () => {
@@ -121,11 +123,11 @@ export default function CalendarComponent({ resetViewTrigger }) {
         setTasks(grouped);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error Loading Tasks", errJson.error || `Server responded with status ${res.status}`);
+        setStatus({ title: "Error Loading Tasks", message: errJson.error || `Server responded with status ${res.status}` });
       }
     } catch (error) {
       console.error("Error loading tasks:", error);
-      Alert.alert("Network Error", `Could not connect to backend server at: ${API_BASE_URL}`);
+      setStatus({ title: "Network Error", message: `Could not connect to backend server at: ${API_BASE_URL}` });
     } finally {
       setLoading(false);
     }
@@ -258,11 +260,11 @@ export default function CalendarComponent({ resetViewTrigger }) {
         setShowTaskList(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error Creating Task", errJson.error || `Server error: ${res.status}`);
+        setStatus({ title: "Error Creating Task", message: errJson.error || `Server error: ${res.status}` });
       }
     } catch (error) {
       console.error("Error creating task:", error);
-      Alert.alert("Connection Failed", "Could not submit task. Please check if backend server is running.");
+      setStatus({ title: "Connection Failed", message: "Could not submit task. Please check if backend server is running." });
     }
   }
 
@@ -307,11 +309,11 @@ export default function CalendarComponent({ resetViewTrigger }) {
         }));
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error Updating Task", errJson.error || "Could not update task status.");
+        setStatus({ title: "Error Updating Task", message: errJson.error || "Could not update task status." });
       }
     } catch (error) {
       console.error("Error updating task:", error);
-      Alert.alert("Network Error", "Could not connect to the server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the server." });
     }
   }
 
@@ -333,11 +335,11 @@ export default function CalendarComponent({ resetViewTrigger }) {
         setShowTaskDetails(false);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error Deleting Task", errJson.error || "Could not delete task.");
+        setStatus({ title: "Error Deleting Task", message: errJson.error || "Could not delete task." });
       }
     } catch (error) {
       console.error("Error deleting task:", error);
-      Alert.alert("Network Error", "Could not connect to the server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the server." });
     }
   }
 
@@ -353,78 +355,100 @@ export default function CalendarComponent({ resetViewTrigger }) {
 
   const rows = buildGrid(calYear, calMonth);
 
+  const statusModal = (
+    <StatusModal
+      visible={status !== null}
+      type="error"
+      title={status?.title}
+      message={status?.message}
+      onClose={() => setStatus(null)}
+    />
+  );
+
   if (showAddTask) {
     return (
-      <AddTaskScreen
-        selectedKey={selectedKey}
-        displayDate={displayDate}
-        onSubmit={handleAddTask}
-        onClose={() => { setShowAddTask(false); setSelectedKey(null); }}
-        onBack={dayTasks.length > 0 ? () => { setShowAddTask(false); setShowTaskList(true); } : null}
-      />
+      <>
+        <AddTaskScreen
+          selectedKey={selectedKey}
+          displayDate={displayDate}
+          onSubmit={handleAddTask}
+          onClose={() => { setShowAddTask(false); setSelectedKey(null); }}
+          onBack={dayTasks.length > 0 ? () => { setShowAddTask(false); setShowTaskList(true); } : null}
+        />
+        {statusModal}
+      </>
     );
   }
 
   if (showTaskList) {
     return (
-      <TaskListScreen
-        selectedKey={selectedKey}
-        displayDate={displayDate}
-        tasks={dayTasks}
-        onAddTask={() => { setShowTaskList(false); setShowAddTask(true); }}
-        onViewTask={task => {
-          setViewTask(task);
-          setDetailsReturn('list');
-          setShowTaskList(false);
-          setShowTaskDetails(true);
-        }}
-        onComplete={handleComplete}
-        onDelete={handleDelete}
-        onClose={() => { setShowTaskList(false); setSelectedKey(null); }}
-      />
+      <>
+        <TaskListScreen
+          selectedKey={selectedKey}
+          displayDate={displayDate}
+          tasks={dayTasks}
+          onAddTask={() => { setShowTaskList(false); setShowAddTask(true); }}
+          onViewTask={task => {
+            setViewTask(task);
+            setDetailsReturn('list');
+            setShowTaskList(false);
+            setShowTaskDetails(true);
+          }}
+          onComplete={handleComplete}
+          onDelete={handleDelete}
+          onClose={() => { setShowTaskList(false); setSelectedKey(null); }}
+        />
+        {statusModal}
+      </>
     );
   }
 
   if (showTaskDetails) {
     return (
-      <TaskDetailsScreen
-        task={viewTask}
-        displayDate={displayDate}
-        onComplete={(id) => {
-          handleComplete(id, viewTask.dateKey);
-          setViewTask(prev => ({
-            ...prev,
-            status: prev.status === 'Completed' ? 'In Process' : 'Completed',
-            completedAt: prev.status === 'Completed' ? null : makeTimestamp()
-          }));
-        }}
-        onDelete={(id) => handleDelete(id, viewTask.dateKey)}
-        onClose={() => {
-          setShowTaskDetails(false);
-          if (detailsReturn === 'list') setShowTaskList(true);
-          else setShowViewAllTasks(true);
-        }}
-      />
+      <>
+        <TaskDetailsScreen
+          task={viewTask}
+          displayDate={displayDate}
+          onComplete={(id) => {
+            handleComplete(id, viewTask.dateKey);
+            setViewTask(prev => ({
+              ...prev,
+              status: prev.status === 'Completed' ? 'In Process' : 'Completed',
+              completedAt: prev.status === 'Completed' ? null : makeTimestamp()
+            }));
+          }}
+          onDelete={(id) => handleDelete(id, viewTask.dateKey)}
+          onClose={() => {
+            setShowTaskDetails(false);
+            if (detailsReturn === 'list') setShowTaskList(true);
+            else setShowViewAllTasks(true);
+          }}
+        />
+        {statusModal}
+      </>
     );
   }
 
   if (showViewAllTasks) {
     return (
-      <ViewAllTasksScreen
-        tasks={allTasks}
-        displayDate={displayDate}
-        currentUser={currentUser}
-        usersList={usersList}
-        onViewTask={task => {
-          setViewTask(task);
-          setDetailsReturn('viewAll');
-          setShowViewAllTasks(false);
-          setShowTaskDetails(true);
-        }}
-        onComplete={handleComplete}
-        onDelete={handleDelete}
-        onClose={() => setShowViewAllTasks(false)}
-      />
+      <>
+        <ViewAllTasksScreen
+          tasks={allTasks}
+          displayDate={displayDate}
+          currentUser={currentUser}
+          usersList={usersList}
+          onViewTask={task => {
+            setViewTask(task);
+            setDetailsReturn('viewAll');
+            setShowViewAllTasks(false);
+            setShowTaskDetails(true);
+          }}
+          onComplete={handleComplete}
+          onDelete={handleDelete}
+          onClose={() => setShowViewAllTasks(false)}
+        />
+        {statusModal}
+      </>
     );
   }
 
@@ -574,6 +598,7 @@ export default function CalendarComponent({ resetViewTrigger }) {
           </TouchableOpacity>
         </ScrollView>
       )}
+      {statusModal}
     </View>
   );
 }

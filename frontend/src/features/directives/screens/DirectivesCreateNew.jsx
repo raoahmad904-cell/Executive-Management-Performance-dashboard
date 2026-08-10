@@ -3,7 +3,6 @@ import { useNavigation } from "@react-navigation/native";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useLayoutEffect, useState, useEffect } from "react";
 import {
-  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -17,6 +16,7 @@ import { API_BASE_URL } from "../../../utils/utils.js";
 import CustomDropdown from "../../../components/forms/CustomDropdown";
 import CustomDropdownLabel from "../../../components/forms/CustomDropdownLabel";
 import DateFilterField from "../../../utils/DateFilterField";
+import StatusModal from "../../../components/common/StatusModal";
 
 const PRIORITY_OPTIONS = [
   { label: "Low", value: "low" },
@@ -57,6 +57,7 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
   const [details, setDetails] = useState("");
   const [attachments, setAttachments] = useState([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [status, setStatus] = useState(null); // { title, message }
 
   const labelCls = "mb-1.5 text-sm font-semibold text-white/95";
   const triggerCls = "rounded-xl border-0 bg-white px-3.5 h-12 flex-row items-center justify-between";
@@ -97,21 +98,21 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
         })),
       ]);
     } catch (e) {
-      Alert.alert("Attachments", "Could not open file picker.");
+      setStatus({ title: "Attachments", message: "Could not open file picker." });
     }
   }
 
   async function handleSubmit() {
     if (selectedUserIds.length === 0) {
-      Alert.alert("Validation", "Select at least one user.");
+      setStatus({ title: "Validation", message: "Select at least one user." });
       return;
     }
     if (!subject.trim()) {
-      Alert.alert("Validation", "Subject is required.");
+      setStatus({ title: "Validation", message: "Subject is required." });
       return;
     }
     if (!details.trim()) {
-      Alert.alert("Validation", "Directive Details is required.");
+      setStatus({ title: "Validation", message: "Directive Details is required." });
       return;
     }
 
@@ -163,11 +164,11 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
         setShowSuccessModal(true);
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert("Error", errJson.error || "Failed to submit directive.");
+        setStatus({ title: "Error", message: errJson.error || "Failed to submit directive." });
       }
     } catch (error) {
       console.error("Error creating directive:", error);
-      Alert.alert("Network Error", "Could not connect to the backend server.");
+      setStatus({ title: "Network Error", message: "Could not connect to the backend server." });
     }
   }
 
@@ -411,6 +412,14 @@ export default function DirectivesCreateNew({ navigation, onSubmitted }) {
           </View>
         </View>
       </Modal>
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

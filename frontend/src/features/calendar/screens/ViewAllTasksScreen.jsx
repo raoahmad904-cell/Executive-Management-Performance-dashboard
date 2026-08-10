@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   Modal,
   ScrollView,
   Text,
@@ -15,6 +14,7 @@ import DateFilterField from "../../../utils/DateFilterField";
 import { formatCompletedAt } from "../../../utils/utils";
 import { EMBLEM_BASE64 } from "../../../utils/logoBase64";
 import * as Print from 'expo-print';
+import StatusModal from "../../../components/common/StatusModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const labelCls = "mb-1 text-sm font-semibold text-white/95";
@@ -101,6 +101,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
   const [selectedViewTask, setSelectedViewTask] = useState(null);
   const [deleteTargetTask, setDeleteTargetTask] = useState(null);
   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [status, setStatus] = useState(null); // { type, title, message }
 
   const isManagement = useMemo(() => {
     const roleLower = currentUser?.role ? currentUser.role.toLowerCase() : '';
@@ -229,7 +230,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
 
   async function handlePrint() {
     if (filtered.length === 0) {
-      Alert.alert("Notice", "No tasks available to print.");
+      setStatus({ type: "warning", title: "Notice", message: "No tasks available to print." });
       return;
     }
 
@@ -318,7 +319,7 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
         return;
       }
       console.error("Print Error:", error);
-      Alert.alert("Print Failed", "An error occurred while preparing the PDF for printing.");
+      setStatus({ type: "error", title: "Print Failed", message: "An error occurred while preparing the PDF for printing." });
     }
   }
 
@@ -807,6 +808,14 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
           </View>
         </View>
       </Modal>
+
+      <StatusModal
+        visible={status !== null}
+        type={status?.type}
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

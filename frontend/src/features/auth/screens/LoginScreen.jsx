@@ -87,19 +87,21 @@
 
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../../utils/utils.js";
+import StatusModal from "../../../components/common/StatusModal";
 
 export default function LoginScreen({ navigation }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null); // { title, message }
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Enter email and password");
+      setStatus({ title: "Missing Information", message: "Enter email and password." });
       return;
     }
 
@@ -143,7 +145,7 @@ export default function LoginScreen({ navigation }) {
         });
       }
     } catch (error) {
-      Alert.alert("Login Error", error.message);
+      setStatus({ title: "Login Error", message: error.message });
     } finally {
       setLoading(false);
     }
@@ -197,8 +199,8 @@ export default function LoginScreen({ navigation }) {
         {/* Test Autofill Links */}
         <TouchableOpacity
           onPress={() => {
-            setEmail("management@example.com");
-            setPassword("management123");
+            setEmail("testmanagement@test.com");
+            setPassword("123456");
           }}
           className="mt-3"
           activeOpacity={0.7}
@@ -210,8 +212,8 @@ export default function LoginScreen({ navigation }) {
 
         <TouchableOpacity
           onPress={() => {
-            setEmail("admin@example.com");
-            setPassword("password123");
+            setEmail("ad2_project@pc.gov.pk");
+            setPassword("12345");
           }}
           className="mt-2.5"
           activeOpacity={0.7}
@@ -221,6 +223,14 @@ export default function LoginScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <StatusModal
+        visible={status !== null}
+        type="error"
+        title={status?.title}
+        message={status?.message}
+        onClose={() => setStatus(null)}
+      />
     </View>
   );
 }

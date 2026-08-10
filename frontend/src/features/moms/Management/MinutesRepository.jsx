@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useLayoutEffect, useMemo, useState, useEffect } from "react";
 import {
-  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -19,6 +18,7 @@ import DateFilterField from "../../../utils/DateFilterField";
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import StatusModal from "../../../components/common/StatusModal";
 
 const SECTION_OPTIONS = [
   { label: "All Sections", value: "" },
@@ -106,6 +106,7 @@ export default function MinutesRepository() {
   const [loading, setLoading] = useState(false);
   const [viewTargetItem, setViewTargetItem] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [alertInfo, setAlertInfo] = useState(null); // { type, title, message }
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -232,7 +233,7 @@ export default function MinutesRepository() {
 
   async function handleDownload(item) {
     if (!item.attachment) {
-      Alert.alert("Notice", "No file attachment found for this record.");
+      setAlertInfo({ type: "warning", title: "Notice", message: "No file attachment found for this record." });
       return;
     }
     try {
@@ -241,27 +242,27 @@ export default function MinutesRepository() {
       const token = await AsyncStorage.getItem("token");
       const url = `${API_BASE_URL}api/mom/download/${item.attachment}`;
       const localUri = FileSystem.cacheDirectory + item.attachment;
-      const { uri, status } = await FileSystem.downloadAsync(url, localUri, {
+      const { uri, status: downloadStatus } = await FileSystem.downloadAsync(url, localUri, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (status !== 200) {
-        Alert.alert("Error", "Could not download the attachment.");
+      if (downloadStatus !== 200) {
+        setAlertInfo({ type: "error", title: "Error", message: "Could not download the attachment." });
         return;
       }
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri);
       } else {
-        Alert.alert("Downloaded", `File saved to ${uri}`);
+        setAlertInfo({ type: "success", title: "Downloaded", message: `File saved to ${uri}` });
       }
     } catch (err) {
       console.error("Failed to download attachment:", err);
-      Alert.alert("Error", "Could not download the attachment.");
+      setAlertInfo({ type: "error", title: "Error", message: "Could not download the attachment." });
     }
   }
 
   async function handlePrint() {
     if (filtered.length === 0) {
-      Alert.alert("Notice", "No records available to print.");
+      setAlertInfo({ type: "warning", title: "Notice", message: "No records available to print." });
       return;
     }
 
@@ -410,7 +411,7 @@ export default function MinutesRepository() {
         return;
       }
       console.error("Print error:", err);
-      Alert.alert("Error", "Could not generate print document.");
+      setAlertInfo({ type: "error", title: "Error", message: "Could not generate print document." });
     }
   }
 
@@ -810,6 +811,14 @@ export default function MinutesRepository() {
           </View>
         </View>
       </Modal>
+
+      <StatusModal
+        visible={alertInfo !== null}
+        type={alertInfo?.type}
+        title={alertInfo?.title}
+        message={alertInfo?.message}
+        onClose={() => setAlertInfo(null)}
+      />
     </ScrollView>
   );
 }
