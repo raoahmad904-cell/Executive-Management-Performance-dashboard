@@ -200,7 +200,7 @@ export default function LoginScreen({ navigation }) {
         <TouchableOpacity
           onPress={() => {
             setEmail("testmanagement@test.com");
-            setPassword("123456");
+            setPassword("12345");
           }}
           className="mt-3"
           activeOpacity={0.7}
