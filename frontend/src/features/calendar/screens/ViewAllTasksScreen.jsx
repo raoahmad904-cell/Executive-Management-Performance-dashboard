@@ -160,17 +160,22 @@ export default function ViewAllTasksScreen({ tasks, onViewTask, onComplete, onDe
 
   const filtered = useMemo(() => {
     return tasks.filter(task => {
-      if (isManagement) {
-        const taskUserId = task.user?._id || task.user?.id || task.user;
-        const currentUserId = currentUser?._id || currentUser?.id;
-        if (filterUser) {
-          if (String(taskUserId) !== String(filterUser)) {
-            return false;
-          }
-        } else {
-          if (String(taskUserId) !== String(currentUserId)) {
-            return false;
-          }
+      // Non-management viewers (and management viewers with no user picked)
+      // only ever see their own tasks; management can pick another user via
+      // filterUser. `tasks` itself may contain other users' records (the
+      // Management/Admin/jManagement base fetch is org-wide via
+      // /tasks/all-non-management), so this check must run unconditionally -
+      // skipping it for non-management leaked other users' tasks into a
+      // plain user's "View All Tasks" list and inflated/destabilized the count.
+      const taskUserId = task.user?._id || task.user?.id || task.user;
+      const currentUserId = currentUser?._id || currentUser?.id;
+      if (isManagement && filterUser) {
+        if (String(taskUserId) !== String(filterUser)) {
+          return false;
+        }
+      } else {
+        if (String(taskUserId) !== String(currentUserId)) {
+          return false;
         }
       }
 
