@@ -21,9 +21,12 @@ function buildGrid(year, month) {
 }
 
 // Dynamically get the host IP address of the machine running Metro bundler
+// (only populated during live `expo start` development). A standalone/production
+// build (like a compiled APK) has no Metro server attached, so hostUri is empty
+// and it falls back to the deployed backend the web app also uses.
 const debuggerHost = Constants.expoConfig?.hostUri || '';
 const hostIp = debuggerHost.split(':').shift();
-const API_BASE_URL = hostIp ? `http://${hostIp}:5000/` : "http://10.30.7.170:5000/"; 
+const API_BASE_URL = hostIp ? `http://${hostIp}:5000/` : "http://202.83.167.229:3000/";
 
 function formatCompletedAt(dateStr) {
     if (!dateStr) return '-';
