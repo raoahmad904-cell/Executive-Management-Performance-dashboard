@@ -199,7 +199,7 @@ export default function DashboardScreen({ route, navigation }) {
             <View className="flex-1 flex-row">
               <GestureDetector gesture={drawerPan}>
                 <View
-                  className="h-full w-[82%] max-w-[360px] overflow-hidden rounded-tr-[28px] rounded-br-[28px] bg-white shadow-2xl"
+                  className="h-full w-[82%] max-w-[360px] overflow-hidden bg-white shadow-2xl"
                   style={{
                     shadowColor: "#000",
                     shadowOffset: { width: 6, height: 0 },

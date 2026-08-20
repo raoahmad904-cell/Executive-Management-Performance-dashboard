@@ -30,7 +30,7 @@ export default function SideMenu({
     <View className="flex-1 bg-white">
       {/* ── 1. Dark Green Header ─────────────────────────────────────────── */}
       <View
-        className="bg-[#0F5D4A] px-5 pb-6 rounded-tr-[28px]"
+        className="bg-[#0F5D4A] px-5 pb-6"
         style={{ paddingTop: topInset + 12 }}
       >
         {/* Top bar with Close button */}
@@ -67,13 +67,10 @@ export default function SideMenu({
             <View className="w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#0F5D4A] absolute bottom-0 right-0" />
           </View>
 
-          {/* Name & Role */}
+          {/* Name */}
           <View className="flex-1">
             <Text className="text-[18px] font-bold text-white leading-[22px]" numberOfLines={2}>
               {userName}
-            </Text>
-            <Text className="text-[12px] font-semibold text-white/90 mt-0.5 leading-[16px]">
-              {userSubtitle}
             </Text>
           </View>
         </TouchableOpacity>

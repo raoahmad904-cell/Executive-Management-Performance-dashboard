@@ -509,7 +509,7 @@ export default function MinutesRepository() {
             className="rounded-xl px-6 py-2.5 items-center"
             style={{ backgroundColor: "#F59E0B" }}
           >
-            <Text className="text-[#0D4429] font-bold text-sm">Search</Text>
+            <Text className="text-white font-bold text-sm">Search</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={clearFilters}

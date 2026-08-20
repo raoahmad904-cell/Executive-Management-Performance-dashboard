@@ -4,7 +4,9 @@ import Constants from "expo-constants";
 import React, { useState, useEffect } from "react";
 import {
   Image,
+  Modal,
   Platform,
+  Pressable,
   StatusBar,
   Text,
   TouchableOpacity,
@@ -88,57 +90,67 @@ export default function DashboardHeader({
           </TouchableOpacity>
 
           {/* Vertical Profile Dropdown Menu */}
-          {open && (
-            <View
-              className="absolute right-0 top-11 z-50 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl"
-              style={{
-                width: 175,
-                elevation: 10,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-              }}
-            >
-              {/* Change Password option */}
-              <TouchableOpacity
-                onPress={() => {
-                  setOpen(false);
-                  navigation?.replace("ChangePassword");
+          <Modal
+            visible={open}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setOpen(false)}
+          >
+            {/* Full-screen backdrop - tapping anywhere outside the menu closes it */}
+            <Pressable style={{ flex: 1 }} onPress={() => setOpen(false)}>
+              <View
+                className="absolute border border-gray-200 bg-white p-1.5 shadow-xl"
+                style={{
+                  top: topInset + 56,
+                  right: 12,
+                  width: 175,
+                  elevation: 10,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
                 }}
-                activeOpacity={0.7}
-                className="flex-row items-center rounded-lg px-3 py-2.5 active:bg-emerald-50"
               >
-                <Ionicons name="key-outline" size={16} color="#0D4429" style={{ marginRight: 8 }} />
-                <Text className="text-[#0D4429] font-bold text-[13px]" numberOfLines={1}>
-                  Change Password
-                </Text>
-              </TouchableOpacity>
+                {/* Change Password option */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setOpen(false);
+                    navigation?.replace("ChangePassword");
+                  }}
+                  activeOpacity={0.7}
+                  className="flex-row items-center px-3 py-2.5 active:bg-emerald-50"
+                >
+                  <Ionicons name="key-outline" size={16} color="#0D4429" style={{ marginRight: 8 }} />
+                  <Text className="text-[#0D4429] font-bold text-[13px]" numberOfLines={1}>
+                    Change Password
+                  </Text>
+                </TouchableOpacity>
 
-              {/* Divider */}
-              <View className="my-1 h-[1px] bg-gray-100" />
+                {/* Divider */}
+                <View className="my-1 h-[1px] bg-gray-100" />
 
-              {/* Logout option */}
-              <TouchableOpacity
-                onPress={() => {
-                  setOpen(false);
-                  navigation?.dispatch(
-                    CommonActions.reset({
-                      index: 0,
-                      routes: [{ name: "Login" }],
-                    })
-                  );
-                }}
-                activeOpacity={0.7}
-                className="flex-row items-center rounded-lg px-3 py-2.5 active:bg-red-50"
-              >
-                <Ionicons name="log-out-outline" size={16} color="#DC2626" style={{ marginRight: 8 }} />
-                <Text className="text-red-500 font-bold text-[13px]" numberOfLines={1}>
-                  Logout
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+                {/* Logout option */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setOpen(false);
+                    navigation?.dispatch(
+                      CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: "Login" }],
+                      })
+                    );
+                  }}
+                  activeOpacity={0.7}
+                  className="flex-row items-center px-3 py-2.5 active:bg-red-50"
+                >
+                  <Ionicons name="log-out-outline" size={16} color="#DC2626" style={{ marginRight: 8 }} />
+                  <Text className="text-red-500 font-bold text-[13px]" numberOfLines={1}>
+                    Logout
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Modal>
         </View>
       </View>
 

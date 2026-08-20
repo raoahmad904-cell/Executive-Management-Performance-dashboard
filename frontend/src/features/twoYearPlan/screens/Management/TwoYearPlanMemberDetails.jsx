@@ -450,7 +450,7 @@ export default function TwoYearPlanMemberDetails({ route, navigation }) {
           </View>
         </View>
 
-        <View className="px-4 pt-4 bg-[#0D4429]">
+        <View className="flex-1 px-4 pt-4 pb-6 bg-[#0D4429]">
           <View
             className={
               isCompact ? "w-full flex-col" : "w-full flex-row flex-wrap gap-3"

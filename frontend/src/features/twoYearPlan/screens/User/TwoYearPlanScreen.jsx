@@ -8,12 +8,14 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
+  StatusBar,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Constants from "expo-constants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StatusModal from "../../../../components/common/StatusModal";
 import {
   Gesture,
@@ -61,6 +63,13 @@ async function getCurrentUserId() {
 
 /** Two Year Plan editor body (used inside Dashboard or inside standalone shell). */
 function TwoYearPlanEditorBody() {
+  const insets = useSafeAreaInsets();
+  // RN's built-in SafeAreaView is a no-op on Android (iOS-only), so the modal
+  // header must add this inset itself to avoid rendering under the status bar.
+  const statusBarFallback =
+    Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : Constants.statusBarHeight ?? 0;
+  const topInset = Math.max(insets.top, statusBarFallback);
+
   const [activeYear, setActiveYear] = useState("2025");
   const [openSection, setOpenSection] = useState(null);
   const [activeQuarter, setActiveQuarter] = useState("Q1");
@@ -349,7 +358,7 @@ function TwoYearPlanEditorBody() {
           </TouchableOpacity>
         ))}
 
-        {!isSubmitted && (
+        {!isSubmitted ? (
           <TouchableOpacity
             onPress={handleSubmit}
             activeOpacity={0.85}
@@ -365,6 +374,12 @@ function TwoYearPlanEditorBody() {
               Submit
             </Text>
           </TouchableOpacity>
+        ) : (
+          <View style={{ paddingVertical: 12, alignItems: "center", marginTop: 4 }}>
+            <Text style={{ color: "#ef4444", fontWeight: "bold", fontSize: 13 }}>
+              🔒 You already submitted this plan
+            </Text>
+          </View>
         )}
       </ScrollView>
 
@@ -373,7 +388,7 @@ function TwoYearPlanEditorBody() {
         animationType="slide"
         onRequestClose={() => setOpenSection(null)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#F8F9FA" }}>
+        <View style={{ flex: 1, backgroundColor: "#F8F9FA" }}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -383,7 +398,8 @@ function TwoYearPlanEditorBody() {
               style={{
                 backgroundColor: ACCENT,
                 paddingHorizontal: 16,
-                paddingVertical: 12,
+                paddingTop: topInset + 12,
+                paddingBottom: 12,
                 flexDirection: "row",
                 alignItems: "center",
               }}
@@ -561,7 +577,7 @@ function TwoYearPlanEditorBody() {
               )}
             </View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
 
       {/* ── 1. Custom Save Success Modal ────────────────────────────── */}

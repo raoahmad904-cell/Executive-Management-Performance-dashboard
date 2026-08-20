@@ -21,7 +21,11 @@ export default function AppNavigator() {
         component={SplashScreen}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="Dashboard"
         component={DashboardScreen}
