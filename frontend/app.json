@@ -20,7 +20,15 @@
     },
     "plugins": [
       "expo-font",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -28,9 +36,8 @@
     },
     "extra": {
       "eas": {
-        "projectId": "9c4375f6-14e8-485a-a8aa-f96f2bcc756f"
+        "projectId": "d4c22d5a-0c5b-49d1-8fb1-9e68fedda5a4"
       }
-    },
-    "owner": "raoahmadrashid"
+    }
   }
 }
